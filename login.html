@@ -147,7 +147,7 @@ socket.on('login_response', function(data) {
             window.location.href = "configuracion.html";
         }
     } else {
-        alert('❌ ' + data.message);
+alert('❌ Error recibido del servidor: ' + data.message);
     }
 });
 
