@@ -515,7 +515,7 @@ def login(data):
             emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
             
     except Exception as e:
-        print(f"❌ Error en login: {e}")
+        print(f"❌ ERROR DE LOGIN DETALLADO: {str(e)}")
         emit('login_response', {'success': False, 'message': 'Error al iniciar sesión'})
 
 @socketio.on('reconectar_sesion')
