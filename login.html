@@ -70,7 +70,22 @@
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-    const socket = io();
+    // Reemplaza tu inicialización actual por esto:
+const socket = io("https://mi-ajedrez.onrender.com", {
+    transports: ['websocket'],
+    upgrade: false,
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000
+});
+
+socket.on('connect', () => {
+    console.log("✅ ¡Conectado exitosamente al servidor!");
+});
+
+socket.on('connect_error', (err) => {
+    console.error("❌ Error de conexión:", err);
+});
     let nickGlobal = '';
 
     function entrarAlJuego() {
