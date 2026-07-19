@@ -431,11 +431,11 @@ def login(data):
                 'elo_rapid': 1200
             }).execute()
 
-            # Verificamos si la inserción funcionó antes de acceder a [0]
+            # Verificamos si la inserción funcionó
             if res_insert.data and len(res_insert.data) > 0:
                 user_id = res_insert.data[0]['id']
             else:
-                # Si falló, buscamos el ID del usuario recién creado
+                # Si falló, buscamos el ID
                 res_busca = supabase.table('usuarios').select('id').eq('nick', nick).execute()
                 if res_busca.data:
                     user_id = res_busca.data[0]['id']
