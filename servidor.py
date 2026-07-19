@@ -11,7 +11,7 @@ from supabase import create_client, Client
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.secret_key = 'elitechess_secreto_2026'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 # --- CONEXIÓN A SUPABASE ---
 # ⚠️ REEMPLAZA ESTOS VALORES CON LOS TUYOS
