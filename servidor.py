@@ -418,7 +418,7 @@ def login(data):
                 print(f"✅ Invitado reconectado: {nick_real} (ID: {user_id})")
                 emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'invitado': True})
                 return
-            else:
+        else:
             # Creamos usuario nuevo si no existe
             password_hash = hash_password('invitado_temporal')
             
