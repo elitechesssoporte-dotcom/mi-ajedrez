@@ -396,6 +396,7 @@ def registro(data):
 
 @socketio.on('login')
 def login(data):
+    print(f"DEBUG: Recibida solicitud de login para: {data.get('nick')}")
     global usuarios_conectados
     nick = data.get('nick')
     password = data.get('password')
@@ -510,6 +511,7 @@ def login(data):
             usuarios_conectados[nick_real] = sid
             sids_activos[sid] = True
             print(f"✅ Login exitoso: {nick_real} (ID: {user_id}) - Session: {sid}")
+            print("DEBUG: Login procesado correctamente")
             emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
         else:
             emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
