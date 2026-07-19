@@ -154,6 +154,20 @@ socket.on('login_response', function(data) {
             entrarAlJuego();
         }
     });
+	// NUEVO: Intentar reconectar automáticamente al cargar la página
+window.onload = function() {
+    var nickGuardado = localStorage.getItem('nickJugador');
+    var esInvitado = localStorage.getItem('esInvitado');
+    
+    if (nickGuardado) {
+        console.log('🔄 Intentando reconexión automática para:', nickGuardado);
+        socket.emit('login', { 
+            nick: nickGuardado, 
+            password: esInvitado ? 'invitado' : 'guardada_o_token', // Asegúrate de que el servidor acepte esto
+            reconexion: true 
+        });
+    }
+};
 </script>
 
 </body>
