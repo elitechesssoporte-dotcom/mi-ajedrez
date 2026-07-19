@@ -419,15 +419,30 @@ def login(data):
                 emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'invitado': True})
                 return
             else:
-                password_hash = hash_password('invitado_temporal')
-                response = supabase.table('usuarios').insert({
-                    'nick': nick,
-                    'password_hash': password_hash,
-                    'elo_bullet': 1200,
-                    'elo_blitz': 1200,
-                    'elo_rapid': 1200
-                }).execute()
-                user_id = response.data[0]['id']
+            # Creamos usuario nuevo si no existe
+            password_hash = hash_password('invitado_temporal')
+            
+            # Insertamos y capturamos la respuesta
+            res_insert = supabase.table('usuarios').insert({
+                'nick': nick,
+                'password_hash': password_hash,
+                'elo_bullet': 1200,
+                'elo_blitz': 1200,
+                'elo_rapid': 1200
+            }).execute()
+
+            # Verificamos si la inserción funcionó antes de acceder a [0]
+            if res_insert.data and len(res_insert.data) > 0:
+                user_id = res_insert.data[0]['id']
+            else:
+                # Si falló, buscamos el ID del usuario recién creado
+                res_busca = supabase.table('usuarios').select('id').eq('nick', nick).execute()
+                if res_busca.data:
+                    user_id = res_busca.data[0]['id']
+                else:
+                    print(f"❌ Error crítico: No se pudo crear ni encontrar el usuario {nick}")
+                    emit('login_error', {'message': 'Error al crear usuario'})
+                    return
                 
                 usuarios_conectados[nick] = sid
                 sids_activos[sid] = True
