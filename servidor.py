@@ -17,10 +17,16 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 # ⚠️ REEMPLAZA ESTOS VALORES CON LOS TUYOS
 # --- CONEXIÓN A SUPABASE ---
 # Ahora el código le pide los datos de forma segura a Render
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+# --- CONEXIÓN A SUPABASE ---
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_secret_CYcLPsygIf_rwaqy9gHcwg_9F6sUzy7")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print("✅ Cliente de Supabase creado correctamente")
+except Exception as e:
+    print(f"❌ Error crítico al inicializar Supabase: {e}")
+
 
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
