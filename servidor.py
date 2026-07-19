@@ -1424,20 +1424,9 @@ def buscar_partida_torneo(data):
 
 # --- INICIAR SERVIDOR ---
 if __name__ == '__main__':
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("8.8.8.8", 80))
-        ip_local = s.getsockname()[0]
-    except:
-        ip_local = "127.0.0.1"
-    finally:
-        s.close()
+    # Render asigna dinámicamente el puerto en la variable de entorno PORT
+    port = int(os.environ.get("PORT", 5000))
+    print(f"\n🚀 ELITECHESS SERVER INICIANDO EN PUERTO: {port}")
     
-    print("\n ELITECHESS SERVER")
-    print("="*50)
-    print(f"📍 Local:   http://localhost:5000")
-    print(f"🌐 Red:     http://{ip_local}:5000")
-    print(f"📱 Otros PCs: http://{ip_local}:5000")
-    print("="*50)
-    
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    # Usamos host='0.0.0.0' para que sea accesible desde internet
+    socketio.run(app, host='0.0.0.0', port=port)
