@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FighterChess - Clasificación</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #050505;
+            color: white;
+            font-family: sans-serif;
+            padding: 15px;
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            color: #c4a028;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        .botones-categoria {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .btn-categoria {
+            padding: 14px 20px;
+            border: 2px solid #444;
+            border-radius: 8px;
+            background: #222;
+            color: white;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 120px;
+        }
+        .btn-categoria:hover {
+            background: #333;
+            border-color: #666;
+        }
+        .btn-categoria.activo {
+            background: #c4a028;
+            color: black;
+            border-color: #c4a028;
+            font-weight: bold;
+        }
+        .tabla-clasificacion {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #111;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #444;
+            overflow-x: auto;
+        }
+        .fila-header, .fila-jugador {
+            display: grid;
+            grid-template-columns: 50px 1.5fr 80px 80px 80px 80px;
+            padding: 15px 10px;
+            border-bottom: 1px solid #333;
+            align-items: center;
+            min-width: 600px;
+        }
+        .fila-header {
+            background: #1a1a00;
+            color: #c4a028;
+            font-weight: bold;
+            border-bottom: 2px solid #c4a028;
+            font-size: 0.95em;
+        }
+        .fila-jugador:hover {
+            background: #1a1a1a;
+        }
+        .fila-jugador.mi-posicion {
+            background: #1a1a00;
+            border-left: 4px solid #c4a028;
+        }
+        .posicion {
+            font-weight: bold;
+            font-size: 1.3em;
+            text-align: center;
+        }
+        .pos-1 { color: #ffd700; font-size: 1.5em; }
+        .pos-2 { color: #c0c0c0; font-size: 1.4em; }
+        .pos-3 { color: #cd7f32; font-size: 1.3em; }
+        .elo {
+            color: #c4a028;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .btn-volver {
+            display: block;
+            margin: 25px auto;
+            padding: 15px 30px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 90%;
+            max-width: 300px;
+        }
+        .btn-volver:hover {
+            background: #1976D2;
+        }
+        .info-mi-posicion {
+            text-align: center;
+            color: #c4a028;
+            margin-top: 15px;
+            font-size: 1em;
+            font-weight: bold;
+        }
+        
+        /*  Adaptación completa para móvil */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.6em;
+                margin-bottom: 15px;
+            }
+            
+            .botones-categoria {
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+            
+            .btn-categoria {
+                padding: 12px 16px;
+                font-size: 0.9em;
+                min-width: 100px;
+            }
+            
+            .tabla-clasificacion {
+                border-radius: 8px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .fila-header, .fila-jugador {
+                grid-template-columns: 45px 2fr 75px 70px 70px 70px;
+                padding: 12px 8px;
+                font-size: 0.95em;
+            }
+            
+            .fila-header {
+                font-size: 0.9em;
+            }
+            
+            .posicion {
+                font-size: 1.2em;
+            }
+            
+            .pos-1 { font-size: 1.4em; }
+            .pos-2 { font-size: 1.3em; }
+            .pos-3 { font-size: 1.2em; }
+            
+            .elo {
+                font-size: 1.05em;
+            }
+            
+            .btn-volver {
+                padding: 16px 30px;
+                font-size: 1.1em;
+                margin-top: 20px;
+            }
+            
+            .info-mi-posicion {
+                font-size: 1em;
+                margin-top: 10px;
+            }
+        }
+        
+        /* 📱 Pantallas muy pequeñas */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.4em;
+            }
+            
+            .btn-categoria {
+                padding: 10px 12px;
+                font-size: 0.85em;
+                min-width: 90px;
+            }
+            
+            .fila-header, .fila-jugador {
+                grid-template-columns: 40px 1.8fr 70px 65px 65px 65px;
+                padding: 10px 6px;
+                font-size: 0.9em;
+            }
+            
+            .posicion {
+                font-size: 1.1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🏆 Clasificación FighterChess</h1>
+    
+    <div class="botones-categoria">
+        <button class="btn-categoria" onclick="cargarClasificacion('bullet', this)">⚡ Bullet</button>
+        <button class="btn-categoria activo" onclick="cargarClasificacion('blitz', this)"> Blitz</button>
+        <button class="btn-categoria" onclick="cargarClasificacion('rapid', this)">🎯 Rapid</button>
+    </div>
+    
+    <div class="tabla-clasificacion">
+        <div class="fila-header">
+            <div>#</div>
+            <div>Jugador</div>
+            <div>ELO</div>
+            <div>Gan</div>
+            <div>Per</div>
+            <div>Tab</div>
+        </div>
+        <div id="contenidoTabla">
+            <div style="text-align:center;padding:30px;color:#888;">
+                Cargando clasificación...
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-mi-posicion" id="miPosicion"></div>
+    
+    <button class="btn-volver" onclick="window.location.href='configuracion.html'">
+        🏠 Volver al menú
+    </button>
+
+            <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        let miNick = localStorage.getItem('nickJugador') || '';
+        
+        socket.on('connect', function() {
+            cargarClasificacion('blitz', document.querySelector('.btn-categoria.activo'));
+        });
+        
+        socket.on('clasificacion_response', function(data) {
+            const contenido = document.getElementById('contenidoTabla');
+            const miPosicionDiv = document.getElementById('miPosicion');
+            
+            if (data.jugadores.length === 0) {
+                contenido.innerHTML = '<div style="text-align:center;padding:30px;color:#888;">Aún no hay jugadores en esta categoría</div>';
+                miPosicionDiv.innerText = '';
+                return;
+            }
+            
+            let html = '';
+            let miPos = null;
+            
+            data.jugadores.forEach(function(j) {
+                let clasePos = '';
+                let iconoPosicion = j.posicion;  // Por defecto muestra el número
+                
+                // Asignar iconos para las primeras posiciones
+                if (j.posicion >= 1 && j.posicion <= 3) {
+                    // Trofeos para 1º, 2º y 3º
+                    if (j.posicion === 1) clasePos = 'pos-1';
+                    else if (j.posicion === 2) clasePos = 'pos-2';
+                    else if (j.posicion === 3) clasePos = 'pos-3';
+                    iconoPosicion = '🏆';  // Trofeo para los 3 primeros
+                }
+                else if (j.posicion >= 4 && j.posicion <= 6) {
+                    clasePos = 'pos-medalla';
+                    iconoPosicion = '🏅';  // Medalla para 4º, 5º y 6º
+                }
+                
+                let claseFila = '';
+                if (j.nick.toLowerCase() === miNick.toLowerCase()) {
+                    claseFila = 'mi-posicion';
+                    miPos = j.posicion;
+                }
+                
+                html += `
+                    <div class="fila-jugador ${claseFila}">
+                        <div class="posicion">${j.posicion}</div>
+                        <div style="font-weight: 500; font-size: 1.05em; display: flex; align-items: center; gap: 8px;">
+                            <span>${j.nick}</span>
+                            ${iconoPosicion !== j.posicion ? '<span style="font-size: 1.3em;">' + iconoPosicion + '</span>' : ''}
+                        </div>
+                        <div class="elo">${j.elo}</div>
+                        <div style="text-align: center;">${j.ganadas}</div>
+                        <div style="text-align: center;">${j.perdidas}</div>
+                        <div style="text-align: center;">${j.tablas}</div>
+                    </div>
+                `;
+            });
+            
+            contenido.innerHTML = html;
+            
+            if (miPos) {
+                miPosicionDiv.innerText = `📍 Tu posición: #${miPos}`;
+            } else {
+                miPosicionDiv.innerText = 'ℹ️ No estás en el top 50';
+            }
+        });
+        
+        function cargarClasificacion(categoria, boton) {
+            // Actualizar botones activos
+            document.querySelectorAll('.btn-categoria').forEach(function(btn) {
+                btn.classList.remove('activo');
+            });
+            if (boton) boton.classList.add('activo');
+            
+            socket.emit('obtener_clasificacion', { categoria: categoria });
+        }
+    </script>
+</body>
+</html>

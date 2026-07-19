@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FighterChess</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0a; color: white; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; font-family: 'Inter', sans-serif; 
+        }
+        .login-box { 
+            background: #151515; padding: 40px; border-radius: 12px; 
+            border: 1px solid #333; text-align: center; width: 320px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 { color: #d4af37; margin-bottom: 25px; font-weight: 300; }
+        input { 
+            padding: 12px; margin: 10px 0; width: 100%; border-radius: 6px; 
+            border: 1px solid #444; background: #0a0a0a; color: white;
+        }
+        button { 
+            padding: 12px; background: #d4af37; border: none; cursor: pointer; 
+            font-weight: bold; width: 100%; border-radius: 6px; margin-top: 15px;
+            transition: 0.3s;
+        }
+        button:hover { background: #f0d060; transform: translateY(-2px); }
+        .enlace {
+            margin-top: 20px;
+            color: #888;
+            font-size: 0.9em;
+        }
+        .enlace a {
+            color: #d4af37;
+            text-decoration: none;
+        }
+        .enlace a:hover {
+            text-decoration: underline;
+        }
+		.btn-invitado {
+    background: #333 !important;
+    margin-top: 25px;
+    border-top: 1px solid #444;
+    padding-top: 20px !important;
+}
+
+.btn-invitado:hover {
+    background: #555 !important;
+}
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Entrar al Juego</h2>
+    <input type="text" id="nick" placeholder="Tu Nickname" autofocus>
+    <input type="password" id="pass" placeholder="Contraseña">
+    <button onclick="entrarAlJuego()">ENTRAR</button>
+	<button class="btn-invitado" onclick="entrarComoInvitado()">👤 Entrar como Invitado</button>
+    <div class="enlace">
+        <a href="registro.html" style="color: #d4af37;">📝 Pon tu nick y contraseña para registrar</a>
+    </div>
+    <div class="enlace" style="margin-top: 15px;">
+        <a href="mi_cuenta.html" style="color: #dc3545; font-size: 0.85em;">🗑️ Eliminar mi cuenta</a>
+    </div>
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    let nickGlobal = '';
+
+    function entrarAlJuego() {
+        var nick = document.getElementById('nick').value.trim();
+        var pass = document.getElementById('pass').value;
+
+        if (nick !== "" && pass !== "") {
+            nickGlobal = nick;
+            socket.emit('login', { nick: nick, password: pass });
+        } else {
+            alert("Por favor, rellena todos los campos.");
+        }
+    }
+	function entrarComoInvitado() {
+    // 1. Comprobar si ya teníamos un nick de invitado guardado en este navegador
+    var nickGuardado = localStorage.getItem('nickInvitadoGuardado');
+    var nickInvitado;
+
+    if (nickGuardado) {
+        // Si ya existe, reutilizamos el mismo para no perder el ELO ni las partidas
+        nickInvitado = nickGuardado;
+        console.log('🔄 Recuperando invitado existente:', nickInvitado);
+    } else {
+        // Si no existe, generamos uno nuevo
+        var numeroAleatorio = Math.floor(Math.random() * 9999);
+        nickInvitado = 'Invitado_' + numeroAleatorio;
+        
+        // Lo guardamos en el navegador para la próxima vez
+        localStorage.setItem('nickInvitadoGuardado', nickInvitado);
+        console.log('👤 Generando nuevo invitado:', nickInvitado);
+    }
+    
+    nickGlobal = nickInvitado;
+    socket.emit('login', { 
+        nick: nickInvitado, 
+        password: 'invitado',
+        invitado: true 
+    });
+}
+
+    // Respuesta del login
+socket.on('login_response', function(data) {
+    if (data.success) {
+        localStorage.setItem('nickJugador', data.nick);  // 👈 Cambiado de nickGlobal a data.nick
+        localStorage.setItem('userId', data.userId);
+        
+        // Si es invitado, marcar en localStorage
+        if (data.invitado) {
+            localStorage.setItem('esInvitado', 'true');
+            console.log('👤 Invitado guardado en localStorage');
+        }
+        
+        // ✅ NUEVO: Si es reconexión, ir directamente al tablero
+        if (data.reconexion) {
+            console.log('🔄 Reconexión detectada, yendo al tablero...');
+            window.location.href = "tablero.html";
+        } else {
+            // Login normal, ir a configuración
+            window.location.href = "configuracion.html";
+        }
+    } else {
+        alert('❌ ' + data.message);
+    }
+});
+
+    // NUEVO: Escuchar si nos desconectan por login en otro dispositivo
+    socket.on('sesion_cerrada', function(data) {
+        alert('⚠️ ' + data.mensaje);
+        localStorage.clear();
+        window.location.href = '/login.html';
+    });
+
+    document.getElementById('nick').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('pass').focus();
+        }
+    });
+
+    document.getElementById('pass').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            entrarAlJuego();
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Cuenta - FighterChess</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0a; color: white; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; font-family: 'Inter', sans-serif; 
+        }
+        .box { 
+            background: #151515; padding: 40px; border-radius: 12px; 
+            border: 1px solid #333; text-align: center; width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 { color: #d4af37; margin-bottom: 25px; }
+        input { 
+            padding: 12px; margin: 10px 0; width: 100%; border-radius: 6px; 
+            border: 1px solid #444; background: #0a0a0a; color: white;
+        }
+        .btn { 
+            padding: 12px; border: none; cursor: pointer; 
+            font-weight: bold; width: 100%; border-radius: 6px; margin: 10px 0;
+            transition: 0.3s;
+        }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .info { 
+            background: #1a1a1a; padding: 15px; border-radius: 6px; 
+            margin: 15px 0; text-align: left;
+        }
+        .info p { margin: 5px 0; color: #888; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>🗑️ Eliminar Cuenta</h2>
+    
+    <div class="info">
+        <p><strong>⚠️ Advertencia:</strong></p>
+        <p>Esta acción es <span style="color: #dc3545;">IRREVERSIBLE</span></p>
+        <p>Se eliminarán:</p>
+        <ul style="margin-left: 20px; margin-top: 5px;">
+            <li>Tu nick permanentemente</li>
+            <li>Tu ELO y estadísticas</li>
+            <li>Tu historial de partidas</li>
+        </ul>
+    </div>
+    
+    <input type="text" id="nick" placeholder="Tu Nickname">
+    <input type="password" id="password" placeholder="Contraseña">
+    
+    <button class="btn btn-danger" onclick="eliminarCuenta()">ELIMINAR CUENTA</button>
+    <button class="btn btn-secondary" onclick="window.location.href='login.html'">CANCELAR</button>
+</div>
+
+<script>
+    const socket = io();
+    
+    function eliminarCuenta() {
+        var nick = document.getElementById('nick').value.trim();
+        var password = document.getElementById('password').value;
+        
+        if (nick === "" || password === "") {
+            alert("Por favor, rellena todos los campos.");
+            return;
+        }
+        
+        if (confirm('¿Estás SEGURO de que quieres eliminar la cuenta "' + nick + '"?\n\nEsta acción NO se puede deshacer.')) {
+            socket.emit('eliminar_cuenta', {
+                nick: nick,
+                password: password
+            });
+        }
+    }
+    
+    socket.on('eliminar_response', function(data) {
+        if (data.success) {
+            alert('✅ ' + data.message + '\n\nAhora puedes crear un nuevo nick si lo deseas.');
+            window.location.href = 'login.html';
+        } else {
+            alert('❌ ' + data.message);
+        }
+    });
+</script>
+
+</body>
+</html>
