@@ -18,8 +18,14 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 # --- CONEXIÓN A SUPABASE ---
 # Ahora el código le pide los datos de forma segura a Render
 # --- CONEXIÓN A SUPABASE ---
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_secret_CYcLPsygIf_rwaqy9gHcwg_9F6sUzy7")
+# --- CONEXIÓN A SUPABASE ---
+# Al dejarlo así, Python borrará la clave vieja de su memoria 
+# y tomará la correcta directamente desde el panel de Render
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
