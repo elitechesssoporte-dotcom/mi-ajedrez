@@ -41,15 +41,14 @@
             text-decoration: underline;
         }
 		.btn-invitado {
-    background: #333 !important;
-    margin-top: 25px;
-    border-top: 1px solid #444;
-    padding-top: 20px !important;
-}
-
-.btn-invitado:hover {
-    background: #555 !important;
-}
+            background: #333 !important;
+            margin-top: 25px;
+            border-top: 1px solid #444;
+            padding-top: 20px !important;
+        }
+        .btn-invitado:hover {
+            background: #555 !important;
+        }
     </style>
 </head>
 <body>
@@ -70,22 +69,22 @@
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-    // Reemplaza tu inicialización actual por esto:
-const socket = io("https://mi-ajedrez.onrender.com", {
-    transports: ['websocket'],
-    upgrade: false,
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000
-});
+    const socket = io("https://mi-ajedrez.onrender.com", {
+        transports: ['websocket'],
+        upgrade: false,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+    });
 
-socket.on('connect', () => {
-    console.log("✅ ¡Conectado exitosamente al servidor!");
-});
+    socket.on('connect', () => {
+        console.log("✅ ¡Conectado exitosamente al servidor!");
+    });
 
-socket.on('connect_error', (err) => {
-    console.error("❌ Error de conexión:", err);
-});
+    socket.on('connect_error', (err) => {
+        console.error("❌ Error de conexión:", err);
+    });
+
     let nickGlobal = '';
 
     function entrarAlJuego() {
@@ -99,59 +98,55 @@ socket.on('connect_error', (err) => {
             alert("Por favor, rellena todos los campos.");
         }
     }
-	function entrarComoInvitado() {
-    // 1. Comprobar si ya teníamos un nick de invitado guardado en este navegador
-    var nickGuardado = localStorage.getItem('nickInvitadoGuardado');
-    var nickInvitado;
 
-    if (nickGuardado) {
-        // Si ya existe, reutilizamos el mismo para no perder el ELO ni las partidas
-        nickInvitado = nickGuardado;
-        console.log('🔄 Recuperando invitado existente:', nickInvitado);
-    } else {
-        // Si no existe, generamos uno nuevo
-        var numeroAleatorio = Math.floor(Math.random() * 9999);
-        nickInvitado = 'Invitado_' + numeroAleatorio;
+    function entrarComoInvitado() {
+        var nickGuardado = localStorage.getItem('nickInvitadoGuardado');
+        var nickInvitado;
+
+        if (nickGuardado) {
+            nickInvitado = nickGuardado;
+            console.log('🔄 Recuperando invitado existente:', nickInvitado);
+        } else {
+            var numeroAleatorio = Math.floor(Math.random() * 9999);
+            nickInvitado = 'Invitado_' + numeroAleatorio;
+            localStorage.setItem('nickInvitadoGuardado', nickInvitado);
+            console.log('👤 Generando nuevo invitado:', nickInvitado);
+        }
         
-        // Lo guardamos en el navegador para la próxima vez
-        localStorage.setItem('nickInvitadoGuardado', nickInvitado);
-        console.log('👤 Generando nuevo invitado:', nickInvitado);
+        nickGlobal = nickInvitado;
+        socket.emit('login', { 
+            nick: nickInvitado, 
+            password: 'invitado',
+            invitado: true 
+        });
     }
-    
-    nickGlobal = nickInvitado;
-    socket.emit('login', { 
-        nick: nickInvitado, 
-        password: 'invitado',
-        invitado: true 
-    });
-}
 
     // Respuesta del login
-socket.on('login_response', function(data) {
-    if (data.success) {
-        localStorage.setItem('nickJugador', data.nick);  // 👈 Cambiado de nickGlobal a data.nick
-        localStorage.setItem('userId', data.userId);
-        
-        // Si es invitado, marcar en localStorage
-        if (data.invitado) {
-            localStorage.setItem('esInvitado', 'true');
-            console.log('👤 Invitado guardado en localStorage');
-        }
-        
-        // ✅ NUEVO: Si es reconexión, ir directamente al tablero
-        if (data.reconexion) {
-            console.log('🔄 Reconexión detectada, yendo al tablero...');
-            window.location.href = "tablero.html";
+    socket.on('login_response', function(data) {
+        if (data.success) {
+            localStorage.setItem('nickJugador', data.nick);
+            localStorage.setItem('userId', data.userId);
+            
+            if (data.invitado) {
+                localStorage.setItem('esInvitado', 'true');
+                console.log('👤 Invitado guardado en localStorage');
+            }
+            
+            if (data.reconexion) {
+                console.log('🔄 Reconexión detectada, yendo al tablero...');
+                window.location.href = "tablero.html";
+            } else {
+                window.location.href = "configuracion.html";
+            }
         } else {
-            // Login normal, ir a configuración
-            window.location.href = "configuracion.html";
+            // Solo mostramos el alert si el usuario intentó hacer login manualmente
+            // y no fue un error silencioso de fondo
+            if (document.getElementById('nick').value.trim() !== "") {
+                alert('❌ Error: ' + data.message);
+            }
         }
-    } else {
-alert('❌ Error recibido del servidor: ' + data.message);
-    }
-});
+    });
 
-    // NUEVO: Escuchar si nos desconectan por login en otro dispositivo
     socket.on('sesion_cerrada', function(data) {
         alert('⚠️ ' + data.mensaje);
         localStorage.clear();
@@ -169,20 +164,15 @@ alert('❌ Error recibido del servidor: ' + data.message);
             entrarAlJuego();
         }
     });
-	// NUEVO: Intentar reconectar automáticamente al cargar la página
-window.onload = function() {
-    var nickGuardado = localStorage.getItem('nickJugador');
-    var esInvitado = localStorage.getItem('esInvitado');
-    
-    if (nickGuardado) {
-        console.log('🔄 Intentando reconexión automática para:', nickGuardado);
-        socket.emit('login', { 
-            nick: nickGuardado, 
-            password: esInvitado ? 'invitado' : 'guardada_o_token', // Asegúrate de que el servidor acepte esto
-            reconexion: true 
-        });
-    }
-};
+
+    // CORREGIDO: Si ya hay sesión, redirigir en lugar de intentar login con contraseña falsa
+    window.onload = function() {
+        var nickGuardado = localStorage.getItem('nickJugador');
+        if (nickGuardado) {
+            console.log('🔄 Sesión existente detectada. Redirigiendo...');
+            window.location.href = "configuracion.html";
+        }
+    };
 </script>
 
 </body>
