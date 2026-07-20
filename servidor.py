@@ -27,10 +27,6 @@ try:
 except Exception as e:
     print(f"❌ Error crítico al inicializar Supabase: {e}")
 
-
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 # --- VARIABLES GLOBALES ---
 cola_espera = [] 
 salas = {} 
@@ -527,10 +523,7 @@ def login(data):
         else:
             emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
             
-     pass
-    except Exception as e:
-        print(f"❌ FALLO EN EL LOGIN: {e}")
-        emit('error_login', {'mensaje': 'Error interno en el servidor'})
+     
 @socketio.on('reconectar_sesion')
 def reconectar_sesion(data):
     global usuarios_conectados
