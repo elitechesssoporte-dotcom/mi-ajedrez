@@ -505,18 +505,21 @@ def login(data):
                     print(f"✅ Login exitoso (reconexión automática): {nick_real} -> {sid}")
                     emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
                     return
-                else:
-                    print(f"⚠️ {nick_real} ya está conectado en {old_sid}")
-                    emit('login_response', {'success': False, 'message': 'Este usuario ya está conectado en otro dispositivo'})
-                    return
-            
-            usuarios_conectados[nick_real] = sid
-            sids_activos[sid] = True
-            print(f"✅ Login exitoso: {nick_real} (ID: {user_id}) - Session: {sid}")
-            print("DEBUG: Login procesado correctamente")
-            emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
         else:
-            emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
+            print(f"⚠️ [nick_real] ya está conectado en [old_sid]")
+            emit('login_response', {'success': False, 'message': 'Este usuario ya está conectado en otro dispositivo'})
+            return
+
+        
+        usuarios_conectados[nick_real] = sid
+        sids_activos[sid] = True
+        print(f"✅ Login exitoso: [nick_real] (ID: {user_id}) Session: {sid}")
+        print("DEBUG: Login procesado correctamente")
+        emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
+
+    else:
+        emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
+
             
      
 @socketio.on('reconectar_sesion')
