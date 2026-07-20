@@ -165,14 +165,12 @@
         }
     });
 
-    // CORREGIDO: Si ya hay sesión, redirigir en lugar de intentar login con contraseña falsa
-    window.onload = function() {
-        var nickGuardado = localStorage.getItem('nickJugador');
-        if (nickGuardado) {
-            console.log('🔄 Sesión existente detectada. Redirigiendo...');
-            window.location.href = "configuracion.html";
-        }
-    };
+    // Limpia los campos al cargar
+window.onload = function() {
+    document.getElementById('nick').value = '';
+    document.getElementById('pass').value = '';
+    console.log('📝 Login listo para usar');
+};
 </script>
 
 </body>
