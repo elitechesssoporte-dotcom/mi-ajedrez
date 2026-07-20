@@ -1452,4 +1452,4 @@ if __name__ == '__main__':
     print(f"\n🚀 ELITECHESS SERVER INICIANDO EN PUERTO: {port}")
     
     # Usamos host='0.0.0.0' para que sea accesible desde internet
-    socketio.run(app, host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
