@@ -421,31 +421,31 @@ def login(data):
                 print(f"✅ Invitado reconectado: {nick_real} (ID: {user_id})")
                 emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'invitado': True})
                 return
-        else:
-            # Creamos usuario nuevo si no existe
-            password_hash = hash_password('invitado_temporal')
-            
-            # Insertamos y capturamos la respuesta
-            res_insert = supabase.table('usuarios').insert({
-                'nick': nick,
-                'password_hash': password_hash,
-                'elo_bullet': 1200,
-                'elo_blitz': 1200,
-                'elo_rapid': 1200
-            }).execute()
-
-            # Verificamos si la inserción funcionó
-            if res_insert.data and len(res_insert.data) > 0:
-                user_id = res_insert.data[0]['id']
             else:
-                # Si falló, buscamos el ID
-                res_busca = supabase.table('usuarios').select('id').eq('nick', nick).execute()
-                if res_busca.data:
-                    user_id = res_busca.data[0]['id']
+                # Creamos usuario nuevo si no existe
+                password_hash = hash_password('invitado_temporal')
+                
+                # Insertamos y capturamos la respuesta
+                res_insert = supabase.table('usuarios').insert({
+                    'nick': nick,
+                    'password_hash': password_hash,
+                    'elo_bullet': 1200,
+                    'elo_blitz': 1200,
+                    'elo_rapid': 1200
+                }).execute()
+
+                # Verificamos si la inserción funcionó
+                if res_insert.data and len(res_insert.data) > 0:
+                    user_id = res_insert.data[0]['id']
                 else:
-                    print(f"❌ Error crítico: No se pudo crear ni encontrar el usuario {nick}")
-                    emit('login_error', {'message': 'Error al crear usuario'})
-                    return
+                    # Si falló, buscamos el ID
+                    res_busca = supabase.table('usuarios').select('id').eq('nick', nick).execute()
+                    if res_busca.data:
+                        user_id = res_busca.data[0]['id']
+                    else:
+                        print(f"❌ Error crítico: No se pudo crear ni encontrar el usuario {nick}")
+                        emit('login_error', {'message': 'Error al crear usuario'})
+                        return
                 
                 usuarios_conectados[nick] = sid
                 sids_activos[sid] = True
@@ -454,6 +454,7 @@ def login(data):
                 emit('login_response', {'success': True, 'nick': nick, 'userId': user_id, 'invitado': True})
                 return
         
+        # Login normal (no invitado)
         response = supabase.table('usuarios').select('id, nick, password_hash').ilike('nick', nick).execute()
         
         if not response.data or len(response.data) == 0:
@@ -466,6 +467,7 @@ def login(data):
         stored_password = user['password_hash']
         
         if verify_password(stored_password, password):
+            # Verificar si hay reconexión pendiente
             if nick_real in temporizadores_reconexion:
                 print(f"🔄 RECONEXIÓN DETECTADA para {nick_real}")
                 timer = temporizadores_reconexion[nick_real]
@@ -489,6 +491,7 @@ def login(data):
                 emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'reconexion': True})
                 return
             
+            # Verificar si ya está conectado
             if nick_real in usuarios_conectados:
                 old_sid = usuarios_conectados[nick_real]
                 
@@ -505,23 +508,24 @@ def login(data):
                     print(f"✅ Login exitoso (reconexión automática): {nick_real} -> {sid}")
                     emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
                     return
-        else:
-            print(f"⚠️ [nick_real] ya está conectado en [old_sid]")
-            emit('login_response', {'success': False, 'message': 'Este usuario ya está conectado en otro dispositivo'})
-            return
-
-        
-        usuarios_conectados[nick_real] = sid
-        sids_activos[sid] = True
-        print(f"✅ Login exitoso: [nick_real] (ID: {user_id}) Session: {sid}")
-        print("DEBUG: Login procesado correctamente")
-        emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
-
+                else:
+                    print(f"⚠️ {nick_real} ya está conectado en {old_sid}")
+                    emit('login_response', {'success': False, 'message': 'Este usuario ya está conectado en otro dispositivo'})
+                    return
+            
+            # Login exitoso nuevo
+            usuarios_conectados[nick_real] = sid
+            sids_activos[sid] = True
+            print(f"✅ Login exitoso: {nick_real} (ID: {user_id}) Session: {sid}")
+            print("DEBUG: Login procesado correctamente")
+            emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
         else:
             emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
-
             
-     
+    except Exception as e:
+        print(f"❌ Error en login: {e}")
+        emit('login_response', {'success': False, 'message': 'Error al iniciar sesión'})
+         
 @socketio.on('reconectar_sesion')
 def reconectar_sesion(data):
     global usuarios_conectados
