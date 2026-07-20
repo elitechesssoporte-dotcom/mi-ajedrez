@@ -517,8 +517,8 @@ def login(data):
         print("DEBUG: Login procesado correctamente")
         emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
 
-    else:
-        emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
+        else:
+            emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
 
             
      
