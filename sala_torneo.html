@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sala del Torneo - EliteChess</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0a; color: white; 
+            font-family: 'Inter', sans-serif;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #151515;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+        
+        .header h1 {
+            color: #d4af37;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .tournament-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        .tournament-info span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .box {
+            background: #151515;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .box h2 {
+            color: #d4af37;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .player-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #222;
+            border-radius: 6px;
+            align-items: center;
+        }
+        
+        .player-row.me {
+            border-left: 3px solid #d4af37;
+            background: #2a2515;
+        }
+        
+        .player-rank {
+            font-weight: bold;
+            color: #d4af37;
+            width: 30px;
+        }
+        
+        .player-name {
+            flex: 1;
+            margin-left: 10px;
+        }
+        
+        .player-points {
+            font-weight: bold;
+            color: #d4af37;
+        }
+        
+        .status-box {
+            text-align: center;
+            padding: 30px;
+            margin-top: 20px;
+            background: #151515;
+            border-radius: 12px;
+            border: 1px solid #333;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .status-text {
+            font-size: 1.3em;
+            color: #d4af37;
+            margin-bottom: 20px;
+        }
+        
+        .btn-search {
+            background: #d4af37;
+            color: #000;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        .btn-search:hover {
+            background: #f0d060;
+            transform: translateY(-2px);
+        }
+        
+        .btn-search:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .nav-top {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+        
+        .nav-top a {
+            color: #888;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        
+        .nav-top a:hover {
+            color: #d4af37;
+        }
+        
+        .timer {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #d4af37;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="nav-top">
+        <a href="configuracion.html">← Volver a configuración</a>
+    </div>
+
+    <div class="header">
+        <h1 id="nombreTorneo">🏆 Cargando torneo...</h1>
+        <div class="tournament-info">
+            <span>⏱️ <span id="tiempoTorneo">-</span></span>
+            <span>⏰ <span class="timer" id="tiempoRestante">30:00</span></span>
+            <span>👥 <span id="numJugadores">0</span> jugadores</span>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <!-- Tabla de Clasificación -->
+        <div class="box">
+            <h2>📊 Clasificación</h2>
+            <div id="clasificacion">
+                <p style="text-align: center; color: #555; padding: 20px;">Esperando jugadores...</p>
+            </div>
+        </div>
+
+        <!-- Jugadores Conectados -->
+        <div class="box">
+            <h2>👥 Jugadores</h2>
+            <div id="jugadores">
+                <p style="text-align: center; color: #555; padding: 20px;">Cargando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estado y Botón -->
+    <div class="status-box">
+        <div class="status-text" id="statusText">⏳ Esperando rivales...</div>
+        <button class="btn-search" id="btnBuscar" onclick="buscarPartida()">
+            🔍 BUSCAR PARTIDA
+        </button>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        console.log("🚀 SALA DE TORNEO CARGADA");
+
+const socket = io();
+
+// ✅ REGISTRARSE CON EL SERVIDOR AL CONECTAR
+socket.on('connect', function() {
+    console.log("✅ Conectado, registrando sesión...");
+    socket.emit('registrar_sesion_torneo', {
+        nick: miNick,
+        torneo_id: torneoId
+    });
+});
+
+socket.on('sesion_registrada', function(data) {
+    console.log("✅ Sesión registrada:", data);
+});
+        let torneoId = localStorage.getItem('torneoActual');
+        let miNick = localStorage.getItem('nickJugador');
+        let estoyBuscando = false;
+
+        if (!torneoId) {
+            alert("⚠️ No has seleccionado ningún torneo");
+            window.location.href = "torneo.html";
+        }
+
+        if (!miNick) {
+            alert("⚠️ Debes iniciar sesión");
+            window.location.href = "login.html";
+        }
+
+        console.log("✅ Torneo ID:", torneoId);
+        console.log("✅ Mi nick:", miNick);
+
+        // Unirse al torneo al cargar
+        socket.emit('unirse_torneo', {
+            torneo_id: torneoId,
+            jugador: miNick
+        });
+
+        // Cuando se actualiza la clasificación
+        socket.on('clasificacion_torneo', function(data) {
+            console.log("📊 Clasificación recibida:", data);
+            actualizarClasificacion(data);
+        });
+
+        // Cuando se actualiza la lista de jugadores
+        socket.on('jugadores_torneo', function(data) {
+            console.log("👥 Jugadores recibidos:", data);
+            actualizarJugadores(data);
+            document.getElementById('numJugadores').textContent = data.length;
+        });
+
+        // Cuando se encuentra partida
+        socket.on('partida_torneo_encontrada', function(data) {
+            console.log("✅ Partida de torneo encontrada:", data);
+            localStorage.setItem('salaId', data.sala);
+            localStorage.setItem('miColor', data.color);
+            localStorage.setItem('rivalNick', data.rival_nick);
+            localStorage.setItem('torneoId', torneoId);
+            window.location.href = "tablero.html";
+        });
+
+        // Actualizar clasificación
+        function actualizarClasificacion(clasificacion) {
+            const contenedor = document.getElementById('clasificacion');
+            
+            if (clasificacion.length === 0) {
+                contenedor.innerHTML = '<p style="text-align: center; color: #555; padding: 20px;">Sin clasificaciones aún</p>';
+                return;
+            }
+            
+            let html = '';
+            clasificacion.forEach((jugador, index) => {
+                const esYo = jugador.nick === miNick ? 'me' : '';
+                html += `
+                    <div class="player-row ${esYo}">
+                        <span class="player-rank">${index + 1}º</span>
+                        <span class="player-name">${jugador.nick} ${esYo ? '(Tú)' : ''}</span>
+                        <span class="player-points">${jugador.puntos} pts</span>
+                    </div>
+                `;
+            });
+            
+            contenedor.innerHTML = html;
+        }
+
+        // Actualizar lista de jugadores
+        function actualizarJugadores(jugadores) {
+            const contenedor = document.getElementById('jugadores');
+            
+            if (jugadores.length === 0) {
+                contenedor.innerHTML = '<p style="text-align: center; color: #555; padding: 20px;">Sin jugadores</p>';
+                return;
+            }
+            
+            let html = '';
+            jugadores.forEach(jugador => {
+                const esYo = jugador === miNick ? 'me' : '';
+                html += `
+                    <div class="player-row ${esYo}">
+                        <span class="player-name">${jugador} ${esYo ? '(Tú)' : ''}</span>
+                    </div>
+                `;
+            });
+            
+            contenedor.innerHTML = html;
+        }
+
+        // Buscar partida
+        function buscarPartida() {
+    if (estoyBuscando) {
+        console.log("️ Ya estás buscando partida");
+        return;
+    }
+    
+    console.log("🔍 Buscando partida en torneo:", torneoId);
+    console.log("👤 Jugador:", miNick);
+    estoyBuscando = true;
+    
+    document.getElementById('btnBuscar').disabled = true;
+    document.getElementById('statusText').textContent = "⏳ Buscando rival...";
+    
+    socket.emit('buscar_partida_torneo', {
+        torneo_id: torneoId,
+        jugador: miNick
+    });
+    
+    console.log("📤 Evento enviado al servidor");
+}
+
+        // Escuchar cuando el servidor dice que puedes buscar
+socket.on('puedes_buscar', function() {
+    console.log("✅ Servidor dice que puedes buscar");
+    estoyBuscando = false;
+    document.getElementById('btnBuscar').disabled = false;
+    document.getElementById('statusText').textContent = "⏳ Esperando rivales...";
+});
+
+// Cuando se encuentra partida
+socket.on('partida_torneo_encontrada', function(data) {
+    console.log("🎉 PARTIDA ENCONTRADA:", data);
+    console.log("📍 Sala:", data.sala);
+    console.log("🎨 Mi color:", data.color);
+    console.log("👤 Rival:", data.rival_nick);
+    
+    localStorage.setItem('salaId', data.sala);
+    localStorage.setItem('miColor', data.color);
+    localStorage.setItem('rivalNick', data.rival_nick);
+    localStorage.setItem('torneoId', data.torneo_id);
+    
+    console.log(" Redirigiendo a tablero.html...");
+    window.location.href = "tablero.html";
+});
+
+// Cuando el servidor dice que puedes buscar
+socket.on('puedes_buscar', function() {
+    console.log("✅ Servidor dice que puedes buscar");
+    estoyBuscando = false;
+    document.getElementById('btnBuscar').disabled = false;
+    document.getElementById('statusText').textContent = "⏳ Esperando rivales...";
+});
+    </script>
+
+</body>
+</html>

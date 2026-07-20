@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>EliteChess - Modo Local (Prueba de Relojes)</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #050505; 
+            color: white; 
+            font-family: sans-serif; 
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .contenedor-principal {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .area-juego {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .player-info {
+            width: 500px;
+            background: #222;
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #444;
+        }
+        .player-info.activo {
+            border-color: #c4a028;
+            background: #1a1a00;
+        }
+        .reloj-inactivo { color: #555; }
+        #board { width: 500px; margin: 10px 0; }
+        .botones-partida {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 10px; margin-top: 20px; width: 500px;
+        }
+        .btn-partida {
+            padding: 12px 15px; border: 2px solid #444; border-radius: 8px;
+            cursor: pointer; font-weight: 600; font-size: 0.9em;
+            transition: all 0.3s; background: #222; color: white;
+        }
+        .btn-partida:hover { background: #333; border-color: #666; }
+        .btn-reset { border-color: #4CAF50; color: #4CAF50; }
+        .btn-reset:hover { background: #4CAF50; color: white; }
+		/* Resaltado para casilla seleccionada (Tap-Tap) */
+.square-selected {
+    background-color: rgba(255, 255, 0, 0.4) !important;
+    box-shadow: inset 0 0 10px #c4a028;
+}
+    </style>
+</head>
+<body>
+
+<div class="contenedor-principal">
+    <div class="area-juego">
+        <div class="player-info" id="playerNegro">
+            <span>Negras</span>
+            <div id="relojNegro" class="reloj-inactivo">05:00</div>
+        </div>
+        <div id="board"></div>
+        <div class="player-info activo" id="playerBlanco">
+            <span>Blancas</span>
+            <div id="relojBlanco">05:00</div>
+        </div>
+        <div class="botones-partida">
+            <button class="btn-partida btn-reset" onclick="resetearPartida()">🔄 Nueva Partida</button>
+            <button class="btn-partida" onclick="cambiarTurnoManual()">⏭️ Cambiar Turno</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+<script>
+    var game = new Chess();
+    var board = null;
+    var intervaloReloj = null;
+    var segundosBlanco = 300; // 5 minutos
+    var segundosNegro = 300;
+    var turnoActual = 'w';
+    var partidaTerminada = false;
+	var premoveActivo = false;
+	var casillaSeleccionada = null; // Para el sistema Tap-Tap
+
+    function formatearTiempo(segs) {
+        var mins = Math.floor(segs / 60);
+        var s = segs % 60;
+        return (mins < 10 ? "0" + mins : mins) + ":" + (s < 10 ? "0" + s : s);
+    }
+
+    function actualizarRelojesVisual() {
+        document.getElementById('relojBlanco').innerText = formatearTiempo(segundosBlanco);
+        document.getElementById('relojNegro').innerText = formatearTiempo(segundosNegro);
+    }
+
+    function detenerReloj() {
+        if (intervaloReloj !== null) {
+            clearInterval(intervaloReloj);
+            intervaloReloj = null;
+            console.log('⏰ Reloj detenido');
+        }
+    }
+
+    function iniciarReloj() {
+        // Detener cualquier reloj anterior
+        if (intervaloReloj !== null) {
+            clearInterval(intervaloReloj);
+            intervaloReloj = null;
+        }
+        
+        if (partidaTerminada) return;
+        
+        console.log('🔍 iniciarReloj() - turno:', turnoActual);
+        
+        intervaloReloj = setInterval(function() {
+            if (partidaTerminada) {
+                detenerReloj();
+                return;
+            }
+            
+            if (turnoActual === 'w') {
+                segundosBlanco--;
+                console.log('⏱️ Blancas:', segundosBlanco);
+                if (segundosBlanco <= 0) {
+                    segundosBlanco = 0;
+                    partidaTerminada = true;
+                    detenerReloj();
+                    alert('⏰ ¡Tiempo! Ganan las negras');
+                }
+            } else {
+                segundosNegro--;
+                console.log('⏱️ Negras:', segundosNegro);
+                if (segundosNegro <= 0) {
+                    segundosNegro = 0;
+                    partidaTerminada = true;
+                    detenerReloj();
+                    alert('⏰ ¡Tiempo! Ganan las blancas');
+                }
+            }
+            
+            actualizarRelojesVisual();
+        }, 1000);
+        
+        console.log('⏰ Reloj INICIADO para', turnoActual === 'w' ? 'blancas' : 'negras');
+    }
+
+    function cambiarTurno() {
+        if (turnoActual === 'w') {
+            turnoActual = 'b';
+            document.getElementById('playerBlanco').classList.remove('activo');
+            document.getElementById('playerNegro').classList.add('activo');
+            document.getElementById('relojBlanco').classList.add('reloj-inactivo');
+            document.getElementById('relojNegro').classList.remove('reloj-inactivo');
+        } else {
+            turnoActual = 'w';
+            document.getElementById('playerNegro').classList.remove('activo');
+            document.getElementById('playerBlanco').classList.add('activo');
+            document.getElementById('relojNegro').classList.add('reloj-inactivo');
+            document.getElementById('relojBlanco').classList.remove('reloj-inactivo');
+        }
+        actualizarRelojesVisual();
+    }
+
+    function cambiarTurnoManual() {
+        detenerReloj();
+        cambiarTurno();
+        iniciarReloj();
+    }
+// === FUNCIÓN COMPARTIDA DE MOVIMIENTO (Para arrastre y Tap-Tap) ===
+function procesarMovimiento(source, target) {
+    var esMiTurno = false;
+    if (miColor === 'white' && game.turn() === 'w') esMiTurno = true;
+    if (miColor === 'black' && game.turn() === 'b') esMiTurno = true;
+    
+    // Premovimiento
+    if (!esMiTurno) {
+        premove = { from: source, to: target };
+        premoveActivo = true;
+        resaltarPremove(source, target);
+        console.log('Premovimiento guardado:', source, '->', target);
+        return false;
+    }
+    
+    var move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q'
+    });
+    
+    if (move === null) return false;
+    
+    if (move.promotion) {
+        game.undo();
+        movimientoPendiente = { from: source, to: target };
+        mostrarModalPromocion();
+        return true;
+    }
+    
+    agregarMovimientoANotacion(move);
+    aplicarIncremento(miColor);
+    
+    socket.emit('mover_pieza', {
+        sala: salaId,
+        movimiento: { from: move.from, to: move.to, promotion: move.promotion },
+        fen: game.fen(),
+        segundos_blanco: segundosBlanco,
+        segundos_negro: segundosNegro
+    });
+    
+    board.position(game.fen());
+    actualizarTurno();
+    actualizarRelojes();
+    comprobarFinDePartida();
+    return true;
+}
+
+    function onDrop(source, target) {
+    console.log('Movimiento (arrastre):', source, '->', target);
+    
+    // Limpiar selección de Tap-Tap si estaba activa
+    $('.square-55d63').removeClass('square-selected');
+    casillaSeleccionada = null;
+    
+    // === FUNCIÓN COMPARTIDA DE MOVIMIENTO (Para arrastre y Tap-Tap) ===
+function procesarMovimiento(source, target) {
+    var esMiTurno = false;
+    if (miColor === 'white' && game.turn() === 'w') esMiTurno = true;
+    if (miColor === 'black' && game.turn() === 'b') esMiTurno = true;
+    
+    // Premovimiento
+    if (!esMiTurno) {
+        premove = { from: source, to: target };
+        premoveActivo = true;
+        resaltarPremove(source, target);
+        console.log('Premovimiento guardado:', source, '->', target);
+        return false;
+    }
+    
+    var move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q'
+    });
+    
+    if (move === null) return false;
+    
+    if (move.promotion) {
+        game.undo();
+        movimientoPendiente = { from: source, to: target };
+        mostrarModalPromocion();
+        return true;
+    }
+    
+    agregarMovimientoANotacion(move);
+    aplicarIncremento(miColor);
+    
+    socket.emit('mover_pieza', {
+        sala: salaId,
+        movimiento: { from: move.from, to: move.to, promotion: move.promotion },
+        fen: game.fen(),
+        segundos_blanco: segundosBlanco,
+        segundos_negro: segundosNegro
+    });
+    
+    board.position(game.fen());
+    actualizarTurno();
+    actualizarRelojes();
+    comprobarFinDePartida();
+    return true;
+}
+
+function onDrop(source, target) {
+    console.log('Movimiento (arrastre):', source, '->', target);
+    
+    // Limpiar selección de Tap-Tap si estaba activa
+    $('.square-55d63').removeClass('square-selected');
+    casillaSeleccionada = null;
+    
+    procesarMovimiento(source, target);
+    return 'snapback';
+}
+
+// === SISTEMA TAP-TAP (Doble clic para móvil y PC) ===
+$('#board').on('click', '.square-55d63', function(e) {
+    // Obtener el ID de la casilla (ej: 'e4')
+    var squareId = $(this).attr('class').split(' ').find(function(cls) {
+        return cls.startsWith('square-');
+    }).replace('square-', '');
+    
+    // Limpiar resaltados anteriores
+    $('.square-55d63').removeClass('square-selected');
+
+    if (casillaSeleccionada === null) {
+        // Primer tap: Seleccionar pieza
+        var piece = game.get(squareId);
+        if (piece && piece.color === (miColor === 'white' ? 'w' : 'b')) {
+            casillaSeleccionada = squareId;
+            $(this).addClass('square-selected');
+            console.log('Pieza seleccionada:', squareId);
+        }
+    } else {
+        // Segundo tap: Intentar mover
+        if (casillaSeleccionada === squareId) {
+            // Si toca la misma casilla, deseleccionar
+            casillaSeleccionada = null;
+            return;
+        }
+
+        // Intentar mover
+        var moveExitoso = procesarMovimiento(casillaSeleccionada, squareId);
+        
+        if (!moveExitoso) {
+            // Si el movimiento fue inválido, comprobar si tocó otra pieza propia
+            var piece = game.get(squareId);
+            if (piece && piece.color === (miColor === 'white' ? 'w' : 'b')) {
+                casillaSeleccionada = squareId;
+                $(this).addClass('square-selected');
+            } else {
+                casillaSeleccionada = null;
+            }
+        } else {
+            casillaSeleccionada = null;
+        }
+    }
+});
+</script>
+</body>
+</html>

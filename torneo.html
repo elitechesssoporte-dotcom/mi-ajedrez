@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torneos - EliteChess</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0a; color: white; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center; 
+            min-height: 100vh; font-family: 'Inter', sans-serif; 
+        }
+        
+        .nav-top {
+            position: absolute; top: 20px; left: 20px;
+        }
+        .nav-top a {
+            color: #888; text-decoration: none; font-size: 0.9em;
+        }
+        .nav-top a:hover { color: #d4af37; }
+
+        .main-container {
+            display: flex;
+            gap: 40px;
+            max-width: 1000px;
+            width: 100%;
+            padding: 20px;
+            align-items: flex-start;
+        }
+
+        /* Panel Crear Torneo */
+        .create-box {
+            background: #151515; padding: 30px; border-radius: 12px; 
+            border: 1px solid #333; width: 100%; max-width: 400px;
+        }
+        .create-box h2 { color: #d4af37; margin-bottom: 20px; text-align: center; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #888; font-size: 0.9em; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 10px; background: #0a0a0a; border: 1px solid #444; 
+            color: white; border-radius: 6px;
+        }
+
+        .btn-gold {
+            background: #d4af37; color: #000; padding: 12px; width: 100%; 
+            border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+            margin-top: 10px; transition: 0.3s;
+        }
+        .btn-gold:hover { background: #f0d060; }
+
+        /* Lista de Torneos */
+        .list-box {
+            background: #151515; padding: 30px; border-radius: 12px; 
+            border: 1px solid #333; width: 100%; max-width: 500px;
+        }
+        .list-box h2 { color: #d4af37; margin-bottom: 20px; text-align: center; }
+
+        .tournament-item {
+            background: #222; padding: 15px; border-radius: 8px; 
+            margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+            border-left: 3px solid #d4af37;
+        }
+        .tournament-info h3 { font-size: 1.1em; color: white; }
+        .tournament-info p { font-size: 0.8em; color: #888; }
+        
+        .btn-join {
+            background: transparent; border: 1px solid #d4af37; color: #d4af37;
+            padding: 8px 15px; border-radius: 4px; cursor: pointer;
+        }
+        .btn-join:hover { background: #d4af37; color: #000; }
+
+    </style>
+</head>
+<body>
+
+    <div class="nav-top">
+        <a href="index.html">← Volver al inicio</a>
+    </div>
+
+    <div class="main-container">
+        
+        <!-- Columna Izquierda: Crear -->
+        <div class="create-box">
+            <h2>🏆 Crear Torneo Arena</h2>
+            <div class="form-group">
+                <label>Nombre del Torneo</label>
+                <input type="text" id="nombreTorneo" placeholder="Ej: Torneo Nocturno Elite">
+            </div>
+            <div class="form-group">
+                <label>Control de Tiempo</label>
+                <select id="tiempoTorneo">
+                    <option value="3+0">3+0 (Bullet)</option>
+                    <option value="5+0">5+0 (Blitz)</option>
+                    <option value="10+0">10+0 (Rapid)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Duración del Torneo</label>
+                <select id="duracionTorneo">
+                    <option value="30">30 minutos</option>
+                    <option value="60">1 hora</option>
+                </select>
+            </div>
+            <button class="btn-gold" onclick="crearTorneo()">INICIAR TORNEO</button>
+        </div>
+
+        <!-- Columna Derecha: Lista -->
+        <div class="list-box">
+            <h2>⚔️ Torneos Activos</h2>
+            <div id="listaTorneos">
+                <p style="text-align:center; color:#555; padding:20px;">No hay torneos activos ahora.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        console.log("🚀 SCRIPT DE TORNEO CARGADO");
+        
+        const socket = io();
+        
+        // --- DIAGNÓSTICO DE CONEXIÓN ---
+        console.log("🔌 Estado de conexión:", socket.connected);
+
+        socket.on('connect', function() {
+            console.log("✅ Conectado al servidor de torneos");
+        });
+
+        socket.on('disconnect', function() {
+            console.log("❌ Desconectado del servidor");
+        });
+
+        socket.on('connect_error', function(error) {
+            console.log("💥 Error de conexión:", error);
+        });
+        // --- FIN DIAGNÓSTICO ---
+
+        // Obtener el nick guardado (ya viene del login)
+        let miNick = localStorage.getItem('nickJugador');
+
+        if (!miNick) {
+            alert("️ Debes iniciar sesión primero");
+            window.location.href = "login.html";
+        }
+
+        console.log("✅ Nick del jugador:", miNick);
+
+        // Cuando se crea un torneo
+        function crearTorneo() {
+            const nombre = document.getElementById('nombreTorneo').value;
+            const tiempo = document.getElementById('tiempoTorneo').value;
+            const duracion = document.getElementById('duracionTorneo').value;
+
+            if(!nombre) {
+                alert("Ponle un nombre al torneo");
+                return;
+            }
+
+            console.log("Creando torneo:", { nombre, tiempo, duracion, creador: miNick });
+            socket.emit('crear_torneo', { 
+                nombre: nombre, 
+                tiempo: tiempo, 
+                duracion: duracion,
+                creador: miNick
+            });
+        }
+
+        // Cuando se une a un torneo
+        function unirseTorneo(torneoId) {
+    console.log("Uniéndose al torneo:", torneoId);
+    
+    // Guardar el ID del torneo actual
+    localStorage.setItem('torneoActual', torneoId);
+    
+    // Enviar evento al servidor
+    socket.emit('unirse_torneo', {
+        torneo_id: torneoId,
+        jugador: miNick
+    });
+    
+    // Redirigir a la sala del torneo
+    window.location.href = "sala_torneo.html";
+}
+
+        // Cuando el servidor confirma que se creó el torneo
+        socket.on('torneo_creado', function(data) {
+            alert('✅ Torneo creado: ' + data.nombre);
+        });
+
+        // Cuando se actualiza la lista de torneos
+        socket.on('lista_torneos_actualizada', function(lista) {
+            console.log(" Recibida lista de torneos:", lista);
+            const contenedor = document.getElementById('listaTorneos');
+            
+            if(lista.length === 0) {
+                contenedor.innerHTML = '<p style="text-align:center; color:#555; padding:20px;">No hay torneos activos ahora.</p>';
+                return;
+            }
+            
+            let html = '';
+            lista.forEach(torneo => {
+                html += `
+                    <div class="tournament-item">
+                        <div class="tournament-info">
+                            <h3>${torneo.nombre}</h3>
+                            <p>️ ${torneo.tiempo} |  ${torneo.duracion} min | 👥 ${torneo.jugadores} jugadores</p>
+                        </div>
+                        <button class="btn-join" onclick="unirseTorneo('${torneo.id}')">UNIRSE</button>
+                    </div>
+                `;
+            });
+            
+            contenedor.innerHTML = html;
+        });
+
+        // Cuando se conecta
+        socket.on('connect', function() {
+    console.log('✅ Conectado al servidor');
+    // Pedir la lista de torneos activos al conectar
+    socket.emit('pedir_torneos');
+});
+    </script>
+
+</body>
+</html>
