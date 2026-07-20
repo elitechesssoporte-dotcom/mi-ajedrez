@@ -950,10 +950,10 @@ def fin_partida(data):
             if torneo_id in torneos:
                 torneo = torneos[torneo_id]
                 
-                if ganador == 'white':
+                if ganador == 'blanco':
                     torneo['puntos'][partida_torneo['jugador1']] = torneo['puntos'].get(partida_torneo['jugador1'], 0) + 2
                     torneo['puntos'][partida_torneo['jugador2']] = torneo['puntos'].get(partida_torneo['jugador2'], 0) + 0
-                elif ganador == 'black':
+                elif ganador == 'negro':
                     torneo['puntos'][partida_torneo['jugador1']] = torneo['puntos'].get(partida_torneo['jugador1'], 0) + 0
                     torneo['puntos'][partida_torneo['jugador2']] = torneo['puntos'].get(partida_torneo['jugador2'], 0) + 2
                 else:
