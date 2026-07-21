@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -130,4 +131,138 @@
 </div>
 
 </body>
+=======
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FighterChess - Portada</title>
+    <style>
+        /* --- ESTILOS DE RESET Y GENERALES --- */
+        :root {
+            --bg-color: #050505; /* Fondo negro muy profundo */
+            --gold-title: #d4af37; /* Dorado clásico de "FIGHTERCHESS" */
+            --silver-text: #c0c0c0; /* Plateado de "AJEDREZ FIGHTER" y corona */
+            --mostaza-btn: #c4a028; /* El color mostaza del botón */
+            --mostaza-hover: #b18a1a;
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --font-title: 'Georgia', 'Times New Roman', serif; /* Una serif clásica */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--silver-text);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* Evita scrolls accidentales */
+        }
+
+        /* --- CONTENEDOR PRINCIPAL CENTRADO --- */
+        .main-wrapper {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 25px; /* Espaciado entre elementos */
+        }
+
+        /* --- LOGOTIPO DE CORONA --- */
+        .corona-icon {
+            font-size: 5rem; /* Un tamaño grande y visible */
+            color: var(--silver-text);
+            text-shadow: 
+                0 0 10px rgba(192, 192, 192, 0.4), /* Brillo plateado suave */
+                0 0 5px rgba(255, 255, 255, 0.2);
+            line-height: 1;
+        }
+
+        /* --- GRAN TÍTULO DORADO (FIGHTERCHESS) --- */
+        .title-elite {
+            font-family: var(--font-title);
+            font-size: 3.5rem;
+            text-transform: uppercase;
+            color: var(--gold-title);
+            text-shadow: 
+                0 0 15px rgba(212, 175, 55, 0.5), /* Brillo dorado suave */
+                0 0 5px rgba(212, 175, 55, 0.2);
+            font-weight: 700;
+            letter-spacing: 3px;
+        }
+
+        /* --- SUBTÍTULO PLATEADO (AJEDREZ FIGHTER) --- */
+        .subtitle-elite {
+            font-size: 1rem;
+            text-transform: uppercase;
+            color: var(--silver-text);
+            font-weight: 300;
+            letter-spacing: 5px;
+            margin-top: -10px; /* Acercar al título */
+        }
+
+        /* --- BOTÓN MOSTAZA (JUGAR ONLINE) --- */
+        .cta-button {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 18px 45px;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            text-decoration: none;
+            background-color: var(--mostaza-btn);
+            color: black; /* Texto negro dentro del botón */
+            border-radius: 10px; /* Esquinas redondeadas */
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .cta-button:hover {
+            background-color: var(--mostaza-hover);
+            transform: translateY(-2px); /* Pequeño salto al hover */
+        }
+
+        /* --- PIE DE PÁGINA (COPYRIGHT) --- */
+        footer {
+            position: absolute;
+            bottom: 20px;
+            font-size: 0.9rem;
+            color: #555; /* Plateado muy oscuro, sutil */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        <!-- El carácter Unicode de la corona plateada -->
+        <div class="corona-icon">♔</div> 
+
+        <!-- Gran Título Dorado -->
+        <h1 class="title-elite">FIGHTERCHESS</h1>
+
+        <!-- Subtítulo Plateado -->
+        <p class="subtitle-elite">AJEDREZ FIGHTER</p>
+
+        <!-- Botón Mostaza -->
+       <a href="login.html" class="cta-button">LOGIN</a>
+    </div>
+
+    <div style="position: fixed; bottom: 10px; left: 15px; color: #666; font-size: 0.8em; opacity: 0.7; z-index: 1000;">
+    <p style="margin: 0;">
+        📧 elitechess.soporte@gmail.com
+    </p>
+</div>
+
+</body>
+>>>>>>> 17bfe1c48b78f7a6e81b0eaf0397f764204f2e57
 </html>
