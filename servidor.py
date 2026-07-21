@@ -15,8 +15,8 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # --- CONEXIÓN A SUPABASE ---
 # ⚠️ REEMPLAZA ESTOS VALORES CON LOS TUYOS
-SUPABASE_URL = "https://stizpdyftzoeuwigxgbi.supabase.co"
-SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0aXpwZHlmdHpvZXV3aWd4Z2JpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzYxMjMxOCwiZXhwIjoyMDk5MTg4MzE4fQ.e56UJiIWRCTfRwvbiqbPW5XT4OpDDoc1LVynCeGe3zU
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
