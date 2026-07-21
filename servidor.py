@@ -15,11 +15,9 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # --- CONEXIÓN A SUPABASE ---
 # ⚠️ REEMPLAZA ESTOS VALORES CON LOS TUYOS
-# Ahora el código le pide los datos de forma segura a Render
-# Al dejarlo así, Python borrará la clave vieja de su memoria 
-# y tomará la correcta directamente desde el panel de Render
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_URL = "https://stizpdyftzoeuwigxgbi.supabase.co"
+SUPABASE_KEY = "sb_secret_CYcLPsygIf_rwaqy9gHcwg_9F6sUzy7"
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- VARIABLES GLOBALES ---
@@ -398,7 +396,6 @@ def registro(data):
 
 @socketio.on('login')
 def login(data):
-    print(f"DEBUG: Recibida solicitud de login para: {data.get('nick')}")
     global usuarios_conectados
     nick = data.get('nick')
     password = data.get('password')
@@ -422,30 +419,15 @@ def login(data):
                 emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'invitado': True})
                 return
             else:
-                # Creamos usuario nuevo si no existe
                 password_hash = hash_password('invitado_temporal')
-                
-                # Insertamos y capturamos la respuesta
-                res_insert = supabase.table('usuarios').insert({
+                response = supabase.table('usuarios').insert({
                     'nick': nick,
                     'password_hash': password_hash,
                     'elo_bullet': 1200,
                     'elo_blitz': 1200,
                     'elo_rapid': 1200
                 }).execute()
-
-                # Verificamos si la inserción funcionó
-                if res_insert.data and len(res_insert.data) > 0:
-                    user_id = res_insert.data[0]['id']
-                else:
-                    # Si falló, buscamos el ID
-                    res_busca = supabase.table('usuarios').select('id').eq('nick', nick).execute()
-                    if res_busca.data:
-                        user_id = res_busca.data[0]['id']
-                    else:
-                        print(f"❌ Error crítico: No se pudo crear ni encontrar el usuario {nick}")
-                        emit('login_error', {'message': 'Error al crear usuario'})
-                        return
+                user_id = response.data[0]['id']
                 
                 usuarios_conectados[nick] = sid
                 sids_activos[sid] = True
@@ -454,7 +436,6 @@ def login(data):
                 emit('login_response', {'success': True, 'nick': nick, 'userId': user_id, 'invitado': True})
                 return
         
-        # Login normal (no invitado)
         response = supabase.table('usuarios').select('id, nick, password_hash').ilike('nick', nick).execute()
         
         if not response.data or len(response.data) == 0:
@@ -467,7 +448,6 @@ def login(data):
         stored_password = user['password_hash']
         
         if verify_password(stored_password, password):
-            # Verificar si hay reconexión pendiente
             if nick_real in temporizadores_reconexion:
                 print(f"🔄 RECONEXIÓN DETECTADA para {nick_real}")
                 timer = temporizadores_reconexion[nick_real]
@@ -491,7 +471,6 @@ def login(data):
                 emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'reconexion': True})
                 return
             
-            # Verificar si ya está conectado
             if nick_real in usuarios_conectados:
                 old_sid = usuarios_conectados[nick_real]
                 
@@ -513,11 +492,9 @@ def login(data):
                     emit('login_response', {'success': False, 'message': 'Este usuario ya está conectado en otro dispositivo'})
                     return
             
-            # Login exitoso nuevo
             usuarios_conectados[nick_real] = sid
             sids_activos[sid] = True
-            print(f"✅ Login exitoso: {nick_real} (ID: {user_id}) Session: {sid}")
-            print("DEBUG: Login procesado correctamente")
+            print(f"✅ Login exitoso: {nick_real} (ID: {user_id}) - Session: {sid}")
             emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
         else:
             emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
@@ -525,7 +502,7 @@ def login(data):
     except Exception as e:
         print(f"❌ Error en login: {e}")
         emit('login_response', {'success': False, 'message': 'Error al iniciar sesión'})
-         
+
 @socketio.on('reconectar_sesion')
 def reconectar_sesion(data):
     global usuarios_conectados
@@ -954,10 +931,10 @@ def fin_partida(data):
             if torneo_id in torneos:
                 torneo = torneos[torneo_id]
                 
-                if ganador == 'blanco':
+                if ganador == 'white':
                     torneo['puntos'][partida_torneo['jugador1']] = torneo['puntos'].get(partida_torneo['jugador1'], 0) + 2
                     torneo['puntos'][partida_torneo['jugador2']] = torneo['puntos'].get(partida_torneo['jugador2'], 0) + 0
-                elif ganador == 'negro':
+                elif ganador == 'black':
                     torneo['puntos'][partida_torneo['jugador1']] = torneo['puntos'].get(partida_torneo['jugador1'], 0) + 0
                     torneo['puntos'][partida_torneo['jugador2']] = torneo['puntos'].get(partida_torneo['jugador2'], 0) + 2
                 else:
@@ -1447,10 +1424,20 @@ def buscar_partida_torneo(data):
 
 # --- INICIAR SERVIDOR ---
 if __name__ == '__main__':
-    # Render asigna dinámicamente el puerto en la variable de entorno PORT
-    port = int(os.environ.get("PORT", 5000))
-    print(f"\n🚀 ELITECHESS SERVER INICIANDO EN PUERTO: {port}")
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip_local = s.getsockname()[0]
+    except:
+        ip_local = "127.0.0.1"
+    finally:
+        s.close()
     
-    # Usamos host='0.0.0.0' para que sea accesible desde internet
-    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
-
+    print("\n ELITECHESS SERVER")
+    print("="*50)
+    print(f"📍 Local:   http://localhost:5000")
+    print(f"🌐 Red:     http://{ip_local}:5000")
+    print(f"📱 Otros PCs: http://{ip_local}:5000")
+    print("="*50)
+    
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
