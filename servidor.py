@@ -2898,4 +2898,4 @@ if __name__ == '__main__':
     
     # Usamos host='0.0.0.0' para que sea accesible desde internet
     socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
->>>>>>> 17bfe1c48b78f7a6e81b0eaf0397f764204f2e57
+
