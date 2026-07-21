@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 from flask import Flask, send_file, request, render_template
 from flask_socketio import SocketIO, emit, join_room
 import uuid
@@ -1442,7 +1442,7 @@ if __name__ == '__main__':
     print("="*50)
     
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)
-=======
+
 from flask import Flask, send_file, request, render_template
 from flask_socketio import SocketIO, emit, join_room
 import uuid
