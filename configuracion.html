@@ -6,236 +6,333 @@
     <title>FighterChess - Configuración</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        body { background: #050505; color: #c0c0c0; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { background: #111; padding: 40px; border-radius: 15px; text-align: center; width: 400px; border: 1px solid #333; }
-        h2 { color: #d4af37; margin-bottom: 25px; }
-        
-        .grid-tiempos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .btn-tiempo { padding: 10px; background: #222; border: 1px solid #444; color: white; cursor: pointer; border-radius: 5px; }
-        .btn-tiempo:hover, .btn-tiempo.active { background: #c4a028; color: black; font-weight: bold; }
+        body { 
+    background: #050505; 
+    color: #c0c0c0; 
+    font-family: sans-serif; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh; 
+    margin: 0; 
+    padding: 20px;
+}
 
-        label { display: block; margin-top: 15px; font-size: 0.9rem; text-align: left; }
-        input { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; background: #000; color: white; border: 1px solid #444; box-sizing: border-box; }
-        
-        #btn-jugar { width: 100%; padding: 12px; background: #c4a028; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 25px; }
-        #btn-jugar:disabled { background: #555; cursor: not-allowed; }
-        
-        #mensaje-espera { color: #c4a028; margin-top: 15px; font-size: 0.9em; display: none; }
-        
-        .tiempo-personalizado {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .tiempo-personalizado input {
-            flex: 1;
-        }
-        
-        .tiempo-personalizado .unidad {
-            background: #222;
-            border: 1px solid #444;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .tiempo-personalizado .unidad.active {
-            background: #c4a028;
-            color: black;
-        }
-        /* 🆕 Estilos para la lista de jugadores en espera */
-        #seccion-cola {
-            margin-top: 20px;
-            border-top: 1px solid #333;
-            padding-top: 15px;
-            transition: opacity 0.3s;
-        }
-        .titulo-cola {
-            color: #c4a028;
-            font-size: 1rem;
-            margin-bottom: 10px;
-            text-align: left;
-        }
-        .jugador-cola {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .jugador-cola:hover {
-            border-color: #c4a028;
-            background: #222;
-        }
-        .jugador-info {
-            display: flex;
-            flex-direction: column;
-            text-align: left;
-        }
-        .jugador-nick {
-            font-weight: bold;
-            color: #fff;
-        }
-        .jugador-ritmo {
-            font-size: 0.85em;
-            color: #888;
-        }
-        .btn-unirse {
-            background: #c4a028;
-            color: #000;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn-unirse:hover {
-            background: #d4af37;
-        }
-		/* 📱 Adaptación para móvil */
+.contenedor-principal {
+    display: flex;
+    gap: 20px;
+    max-width: 1000px;
+    width: 100%;
+    align-items: flex-start;
+    margin-left: auto; /* Desplaza todo hacia la derecha */
+    margin-right: 0;
+}
+
+/* Panel Izquierdo - Configuración (más estrecho) */
+.panel-izquierdo {
+    width: 320px; /* Reducido de flex:1 a ancho fijo */
+    background: #111; 
+    padding: 25px; 
+    border-radius: 15px; 
+    border: 1px solid #333;
+    flex-shrink: 0;
+}
+
+/* Panel Derecho - Lista de jugadores */
+.panel-derecho {
+    width: 300px;
+    background: #111; 
+    padding: 20px; 
+    border-radius: 15px; 
+    border: 1px solid #333;
+    position: sticky;
+    top: 20px;
+    flex-shrink: 0;
+}
+
+/* Contador dentro del panel derecho */
+.contador-box {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+    color: #c0c0c0;
+}
+
+.contador-box span {
+    font-weight: bold;
+    color: #4CAF50;
+    font-size: 1.2em;
+}
+
+h2 { 
+    color: #d4af37; 
+    margin-bottom: 20px; 
+    text-align: center;
+    font-size: 1.3em;
+}
+
+.grid-tiempos { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 8px; 
+    margin-bottom: 15px; 
+}
+
+.btn-tiempo { 
+    padding: 10px; 
+    background: #222; 
+    border: 1px solid #444; 
+    color: white; 
+    cursor: pointer; 
+    border-radius: 5px; 
+    font-size: 0.95em;
+}
+
+.btn-tiempo:hover, .btn-tiempo.active { 
+    background: #c4a028; 
+    color: black; 
+    font-weight: bold; 
+}
+
+label { 
+    display: block; 
+    margin-top: 12px; 
+    font-size: 0.85rem; 
+    text-align: left; 
+}
+
+input { 
+    width: 100%; 
+    padding: 8px; 
+    margin-top: 5px; 
+    border-radius: 5px; 
+    background: #000; 
+    color: white; 
+    border: 1px solid #444; 
+    box-sizing: border-box; 
+    font-size: 0.9em;
+}
+
+#btn-jugar { 
+    width: 100%; 
+    padding: 12px; 
+    background: #c4a028; 
+    border: none; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    font-weight: bold; 
+    margin-top: 20px; 
+    font-size: 1em;
+}
+
+#btn-jugar:disabled { 
+    background: #555; 
+    cursor: not-allowed; 
+}
+
+#mensaje-espera { 
+    color: #c4a028; 
+    margin-top: 12px; 
+    font-size: 0.85em; 
+    display: none; 
+    text-align: center;
+}
+
+.tiempo-personalizado {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.tiempo-personalizado input {
+    flex: 1;
+}
+
+.tiempo-personalizado .unidad {
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.tiempo-personalizado .unidad.active {
+    background: #c4a028;
+    color: black;
+}
+
+/* Lista de jugadores */
+.titulo-cola {
+    color: #c4a028;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+}
+
+.lista-jugadores-container {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.jugador-cola {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.jugador-cola:hover {
+    border-color: #c4a028;
+    background: #222;
+    transform: translateX(3px);
+}
+
+.jugador-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    flex: 1;
+}
+
+.jugador-nick {
+    font-weight: bold;
+    color: #fff;
+    font-size: 1em;
+}
+
+.jugador-ritmo {
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 2px;
+}
+
+.btn-unirse {
+    background: #c4a028;
+    color: #000;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 0.9em;
+}
+
+.btn-unirse:hover {
+    background: #d4af37;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .contenedor-principal {
+        flex-direction: column;
+        margin-left: 0;
+    }
+    
+    .panel-izquierdo, .panel-derecho {
+        width: 100%;
+        position: static;
+    }
+}
+
 @media (max-width: 600px) {
     body {
-        height: auto;
-        min-height: 100vh;
         padding: 10px;
-        align-items: flex-start;
-        padding-top: 20px;
     }
     
-    .box {
-        width: 95% !important;
-        max-width: 500px;
-        padding: 20px !important;
-    }
-    
-    h2 {
-        font-size: 1.3em;
-        margin-bottom: 15px;
+    .panel-izquierdo, .panel-derecho {
+        padding: 15px;
     }
     
     .grid-tiempos {
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 8px !important;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
     }
     
     .btn-tiempo {
-        padding: 18px 10px !important;
-        font-size: 1.1em !important;
-        min-height: 50px;
-    }
-    
-    label {
+        padding: 12px 8px;
         font-size: 1em;
-        margin-top: 12px;
     }
-    
-    input {
-        padding: 15px !important;
-        font-size: 1.1em !important;
-    }
-    
-    #btn-jugar {
-        padding: 18px !important;
-        font-size: 1.2em !important;
-        margin-top: 20px;
-    }
-    
-    #btn-cancelar {
-        padding: 15px !important;
-        font-size: 1.1em !important;
-    }
-	        /* 🆕 NUEVO: Estilo para el contador de jugadores */
-        .btn-contador {
-            width: 100%;
-            padding: 12px;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            color: #c0c0c0;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            cursor: default; /* No muestra la mano de clic */
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            transition: border-color 0.3s;
-        }
-        .btn-contador:hover {
-            border-color: #c4a028;
-        }
-        .btn-contador span {
-            font-weight: bold;
-            color: #4CAF50; /* Color verde para el número */
-            font-size: 1.1em;
-        }
 }
     </style>
 </head>
 <body>
 
-	
-<div class="box">
-	    <h2>TIEMPO DE PARTIDA</h2>
+<div class="contenedor-principal">
+    <!-- Panel Izquierdo - Configuración -->
+    <div class="panel-izquierdo">
+        <h2>⚔️ TIEMPO DE PARTIDA</h2>
+        
+        <label>Elige los minutos:</label>
+        <div class="grid-tiempos" id="selector-tiempo">
+            <button class="btn-tiempo" onclick="seleccionarTiempo(1)">1</button>
+            <button class="btn-tiempo" onclick="seleccionarTiempo(3)">3</button>
+            <button class="btn-tiempo" onclick="seleccionarTiempo(5)">5</button>
+            <button class="btn-tiempo" onclick="seleccionarTiempo(10)">10</button>
+            <button class="btn-tiempo" onclick="seleccionarTiempo(15)">15</button>
+            <button class="btn-tiempo" onclick="seleccionarTiempo(20)">20</button>
+        </div>
+
+        <label>Tiempo personalizado:</label>
+        <div class="tiempo-personalizado">
+            <input type="number" id="minutosPersonalizados" placeholder="Ej: 45, 60, 90..." min="1">
+            <button class="unidad" id="btnMinutos" onclick="usarTiempoPersonalizado('minutos')">Min</button>
+        </div>
+
+        <label>Incremento (segundos):</label>
+        <input type="number" id="incremento" value="0">
+
+        <label>Elige tu color:</label>
+        <div class="grid-tiempos" id="selector-color">
+            <button class="btn-tiempo" onclick="seleccionarColor('white')"> Blancas</button>
+            <button class="btn-tiempo active" onclick="seleccionarColor('random')"> Aleatorio</button>
+            <button class="btn-tiempo" onclick="seleccionarColor('black')">♚ Negras</button>
+        </div>
+
+        <button id="btn-jugar" onclick="iniciarPartida()">🎮 JUGAR</button>
+        <div id="mensaje-espera">⏳ Buscando rival...</div>
+        <button id="btn-cancelar" onclick="cancelarBusqueda()" style="display:none; width:100%; padding:12px; background:#f44336; border:none; border-radius:5px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">
+             Cancelar búsqueda
+        </button>
+        
+        <button class="btn-tiempo" onclick="window.location.href='/clasificacion'" style="width:100%; margin-top:20px; margin-bottom:10px;">
+            🏆 Clasificación
+        </button>
+    </div>
     
-    <!-- 🆕 NUEVO: Botón/Indicador de jugadores en línea -->
-    <button id="btn-contador" class="btn-contador" disabled>
-        🟢 Jugadores en línea: <span id="numero-conectados">0</span>
-    </button>
-    
-    <label>Elige los minutos:</label>
-    <div class="grid-tiempos" id="selector-tiempo">
-        <button class="btn-tiempo" onclick="seleccionarTiempo(1)">1</button>
-        <button class="btn-tiempo" onclick="seleccionarTiempo(3)">3</button>
-        <button class="btn-tiempo" onclick="seleccionarTiempo(5)">5</button>
-        <button class="btn-tiempo" onclick="seleccionarTiempo(10)">10</button>
-        <button class="btn-tiempo" onclick="seleccionarTiempo(15)">15</button>
-        <button class="btn-tiempo" onclick="seleccionarTiempo(20)">20</button>
-    </div>
-
-    <label>Tiempo personalizado:</label>
-    <div class="tiempo-personalizado">
-        <input type="number" id="minutosPersonalizados" placeholder="Ej: 45, 60, 90..." min="1">
-        <button class="unidad" id="btnMinutos" onclick="usarTiempoPersonalizado('minutos')">Min</button>
-    </div>
-
-    <label>Incremento (segundos):</label>
-    <input type="number" id="incremento" value="0">
-
-    <label>Elige tu color:</label>
-    <div class="grid-tiempos" id="selector-color">
-        <button class="btn-tiempo" onclick="seleccionarColor('white')">♔ Blancas</button>
-        <button class="btn-tiempo active" onclick="seleccionarColor('random')"> Aleatorio</button>
-        <button class="btn-tiempo" onclick="seleccionarColor('black')">♚ Negras</button>
-    </div>
-	    <!-- 🆕 NUEVO: Lista de jugadores buscando partida -->
-    <div id="seccion-cola">
-        <h3 class="titulo-cola">👥 Jugadores buscando partida</h3>
-        <div id="lista-jugadores" style="max-height: 200px; overflow-y: auto;">
-            <p style="color: #666; font-size: 0.9em; text-align: center;">No hay jugadores en espera.</p>
+    <!-- Panel Derecho - Contador + Lista de Jugadores -->
+    <div class="panel-derecho">
+        <!-- Contador arriba -->
+        <div class="contador-box">
+            🟢 Jugadores en línea: <span id="numero-conectados">0</span>
+        </div>
+        
+        <!-- Lista de jugadores -->
+        <h3 class="titulo-cola">👥 Jugadores Buscando Partida</h3>
+        <div class="lista-jugadores-container" id="lista-jugadores">
+            <p style="color: #666; text-align: center; padding: 20px;">No hay jugadores en espera.</p>
         </div>
     </div>
-
-    <button class="btn-tiempo" onclick="window.location.href='/clasificacion'" style="width:100%; margin-top:15px; margin-bottom:10px;">
-         Clasificación
-    </button>
-
-    <button id="btn-jugar" onclick="iniciarPartida()">JUGAR</button>
-    <div id="mensaje-espera">⏳ Buscando rival...</div>
-    <button id="btn-cancelar" onclick="cancelarBusqueda()" style="display:none; width:100%; padding:12px; background:#f44336; border:none; border-radius:5px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">
-         Cancelar búsqueda
-    </button>
 </div>
-	
-    <script>
+
+</body>
+
+<script>
     const socket = io();
     let tiempoElegido = 0;
     let colorElegido = 'random';
