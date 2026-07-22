@@ -1449,7 +1449,88 @@ def buscar_partida_torneo(data):
             socketio.emit('puedes_buscar', room=sid_jugador1)
         if sid_jugador2:
             socketio.emit('puedes_buscar', room=sid_jugador2)
-
+@socketio.on('unirse_a_rival')
+def unirse_a_rival(data):
+    global cola_espera 
+    rival_id = data.get('rival_id')
+    jugador_id = request.sid
+    
+    rival_idx = -1
+    for i, rival in enumerate(cola_espera):
+        if rival['id'] == rival_id:
+            rival_idx = i
+            break
+            
+    if rival_idx == -1:
+        emit('error_unirse', {'mensaje': 'Ese jugador ya no está disponible.'})
+        return
+        
+    rival = cola_espera.pop(rival_idx)
+    
+    # Sacar al jugador actual de la cola si estaba buscando
+    cola_espera = [j for j in cola_espera if j['id'] != jugador_id]
+    
+    sala_id = str(uuid.uuid4())
+    tiempo = rival['data'].get('tiempo', 5)
+    incremento = rival['data'].get('incremento', 0)
+    
+    # Asignar colores: el que se une toma el color opuesto al que eligió el creador
+    color_rival = rival['data'].get('color', 'random')
+    if color_rival == 'random':
+        color_rival_final = 'white' if random.random() < 0.5 else 'black'
+        color_mio_final = 'black' if color_rival_final == 'white' else 'white'
+    else:
+        color_rival_final = color_rival
+        color_mio_final = 'black' if color_rival == 'white' else 'white'
+        
+    nick_rival = rival['data'].get('usuario', 'Anónimo')
+    
+    nick_mio = 'Anónimo'
+    for n, sid in usuarios_conectados.items():
+        if sid == jugador_id:
+            nick_mio = n
+            break
+            
+    jugador1 = {'id': rival['id'], 'color': color_rival_final, 'nick': nick_rival}
+    jugador2 = {'id': jugador_id, 'color': color_mio_final, 'nick': nick_mio}
+    
+    nick_blanco = jugador1['nick'] if color_rival_final == 'white' else jugador2['nick']
+    nick_negro = jugador1['nick'] if color_rival_final == 'black' else jugador2['nick']
+    
+    tiempo_inicial_segundos = tiempo * 60
+    salas[sala_id] = {
+        'blanco': nick_blanco,
+        'negro': nick_negro,
+        'partida_terminada': False,
+        'tiempo': tiempo,
+        'incremento': incremento,
+        'estadisticas_actualizadas': False,
+        'segundos_blanco': tiempo_inicial_segundos,
+        'segundos_negro': tiempo_inicial_segundos
+    }
+    
+    join_room(sala_id, sid=jugador1['id'])
+    join_room(sala_id, sid=jugador2['id'])
+    
+    categoria = obtener_categoria(tiempo)
+    elo1 = obtener_elo(jugador1['nick'], categoria)
+    elo2 = obtener_elo(jugador2['nick'], categoria)
+    
+    config_rival = {'tiempo': tiempo, 'incremento': incremento, 'color': color_rival_final}
+    config_mio = {'tiempo': tiempo, 'incremento': incremento, 'color': color_mio_final}
+    
+    emit('partida_encontrada', {
+        'sala': sala_id, 'color': color_rival_final, 'config': config_rival,
+        'rival_nick': nick_mio, 'mi_elo': elo1, 'rival_elo': elo2
+    }, room=jugador1['id'])
+    
+    emit('partida_encontrada', {
+        'sala': sala_id, 'color': color_mio_final, 'config': config_mio,
+        'rival_nick': nick_rival, 'mi_elo': elo2, 'rival_elo': elo1
+    }, room=jugador2['id'])
+    
+    print(f"✅ Partida manual creada: {nick_rival} vs {nick_mio} | Sala: {sala_id}")
+    emitir_cola_espera()
 # --- INICIAR SERVIDOR ---
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
