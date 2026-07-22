@@ -722,15 +722,18 @@ def buscar_partida(data):
             }, room=jugador2['id'])
             
             print(f"✅ Partida creada: {jugador1['nick']} vs {jugador2['nick']} | Sala: {sala_id}")
+            emitir_cola_espera()  # 🆕 Avisar que la cola cambió
             return
         
         cola_espera.append({'id': jugador_id, 'data': data})
         emit('esperando_rival', {'mensaje': f'Esperando rival que elija {data.get("tiempo", 5)} minutos...'})
         print(f"⏳ Jugador {usuario} en cola esperando rival con {data.get('tiempo', 5)} min")
+        emitir_cola_espera()  # 🆕 Avisar que se añadió a la cola
     else:
         cola_espera.append({'id': jugador_id, 'data': data})
         emit('esperando_rival', {'mensaje': 'Esperando a que se conecte un rival...'})
         print(f"⏳ Jugador {usuario} en cola de espera")
+        emitir_cola_espera()  # 🆕 Avisar que se añadió a la cola
 
 @socketio.on('reunirse_a_sala')
 def reunirse_a_sala(data):
