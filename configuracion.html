@@ -544,7 +544,6 @@ socket.on('actualizar_cola_espera', function(cola) {
     console.log('📡 Cola recibida:', cola);
     
     if (buscandoPartida) {
-        console.log('️ No renderizar porque estoy buscando');
         return;
     }
     
@@ -557,8 +556,7 @@ socket.on('actualizar_cola_espera', function(cola) {
     const miNick = localStorage.getItem('nickJugador') || 'Anónimo';
     
     if (!cola || cola.length === 0) {
-        lista.innerHTML = '<p style="color: #666; font-size: 0.9em; text-align: center;">No hay jugadores en espera.</p>';
-        console.log('ℹ️ Cola vacía');
+        lista.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay jugadores en espera.</p>';
         return;
     }
     
@@ -566,16 +564,31 @@ socket.on('actualizar_cola_espera', function(cola) {
     let hayOtros = false;
     
     cola.forEach(function(jugador) {
-        // No mostrarme a mí mismo
         if (jugador.nick === miNick) {
-            console.log('⏭️ Saltando mi propio nick:', jugador.nick);
             return;
         }
         
         hayOtros = true;
+        
+        // Determinar color del ELO
+        var eloClass = '';
+        var elo = jugador.elo || 1200;
+        if (elo < 1000) {
+            eloClass = '#888'; // Gris para principiantes
+        } else if (elo < 1400) {
+            eloClass = '#4CAF50'; // Verde para intermedios
+        } else if (elo < 1800) {
+            eloClass = '#2196F3'; // Azul para avanzados
+        } else if (elo < 2200) {
+            eloClass = '#ff9800'; // Naranja para expertos
+        } else {
+            eloClass = '#f44336'; // Rojo para maestros
+        }
+        
         html += '<div class="jugador-cola" onclick="unirseARival(\'' + jugador.id + '\', \'' + jugador.nick + '\', ' + jugador.tiempo + ', ' + jugador.incremento + ')">';
         html += '  <div class="jugador-info">';
         html += '    <span class="jugador-nick">' + jugador.nick + '</span>';
+        html += '    <span class="jugador-elo" style="color: ' + eloClass + '">🏆 ELO: ' + elo + '</span>';
         html += '    <span class="jugador-ritmo">⏱️ ' + jugador.tiempo + '+' + jugador.incremento + 's</span>';
         html += '  </div>';
         html += '  <button class="btn-unirse">Jugar</button>';
@@ -586,11 +599,9 @@ socket.on('actualizar_cola_espera', function(cola) {
         lista.innerHTML = html;
         console.log('✅ Lista renderizada con ' + cola.length + ' jugadores');
     } else {
-        lista.innerHTML = '<p style="color: #666; font-size: 0.9em; text-align: center;">No hay otros jugadores en espera.</p>';
-        console.log('ℹ️ No hay otros jugadores (solo yo)');
+        lista.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay otros jugadores en espera.</p>';
     }
 });
-
 // Función para unirse a un rival
 function unirseARival(rivalId, rivalNick, tiempo, incremento) {
     if (buscandoPartida) {
