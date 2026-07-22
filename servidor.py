@@ -360,7 +360,10 @@ def handle_disconnect():
     if nick_desconectado and nick_desconectado in partidas_activas:
         del partidas_activas[nick_desconectado]
     
-    print(f"   ✅ Sesión liberada correctamente")
+      print(f"   ✅ Sesión liberada correctamente")
+    
+    # 🆕 Añade esta línea al final de la función handle_disconnect (mismo nivel de indentación que el print de arriba)
+    emit('actualizar_contador', len(sids_activos), broadcast=True)
 
 @socketio.on('registro')
 def registro(data):
