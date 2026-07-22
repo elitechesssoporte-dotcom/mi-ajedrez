@@ -738,6 +738,7 @@ def buscar_partida(data):
 def pedir_cola_espera():
     print(f"📋 Alguien pidió la cola manualmente")
     emitir_cola_espera()
+    
 @socketio.on('reunirse_a_sala')
 def reunirse_a_sala(data):
     sala_id = data.get('sala')
