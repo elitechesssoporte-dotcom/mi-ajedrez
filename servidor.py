@@ -1121,6 +1121,7 @@ def aceptar_tablas(data):
             
         except Exception as e:
             print(f"❌ Error al actualizar ELO en tablas: {e}")
+            emitir_cola_espera()  # 🆕 Avisar que se eliminó de la cola
         
         emit('partida_finalizada', {
             'motivo': 'tablas',
