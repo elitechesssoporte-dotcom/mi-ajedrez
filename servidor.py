@@ -734,7 +734,10 @@ def buscar_partida(data):
         emit('esperando_rival', {'mensaje': 'Esperando a que se conecte un rival...'})
         print(f"⏳ Jugador {usuario} en cola de espera")
         emitir_cola_espera()  # 🆕 Avisar que se añadió a la cola
-
+@socketio.on('pedir_cola_espera')
+def pedir_cola_espera():
+    print(f"📋 Alguien pidió la cola manualmente")
+    emitir_cola_espera()
 @socketio.on('reunirse_a_sala')
 def reunirse_a_sala(data):
     sala_id = data.get('sala')
