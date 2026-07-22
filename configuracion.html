@@ -535,18 +535,16 @@ socket.on('actualizar_cola_espera', function(cola) {
 // Función para unirse a un rival
 function unirseARival(rivalId, rivalNick, tiempo, incremento) {
     if (buscandoPartida) {
-        alert('️ Cancela tu búsqueda actual antes de unirte a otro jugador.');
+        alert('⚠️ Cancela tu búsqueda actual antes de unirte a otro jugador.');
         return;
     }
     
-    if (confirm('¿Quieres jugar una partida de ' + tiempo + '+' + incremento + 's contra ' + rivalNick + '?')) {
-        console.log(' Uniéndose a:', rivalNick);
-        localStorage.setItem('tiempoPartida', tiempo);
-        localStorage.setItem('incrementoPartida', incremento);
-        localStorage.setItem('colorElegido', 'random');
-        
-        socket.emit('unirse_a_rival', { rival_id: rivalId });
-    }
+    console.log('✅ Uniéndose directamente a:', rivalNick);
+    localStorage.setItem('tiempoPartida', tiempo);
+    localStorage.setItem('incrementoPartida', incremento);
+    localStorage.setItem('colorElegido', 'random');
+    
+    socket.emit('unirse_a_rival', { rival_id: rivalId });
 }
 
 // Manejar error al unirse
