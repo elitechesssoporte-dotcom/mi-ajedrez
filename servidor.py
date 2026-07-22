@@ -33,6 +33,22 @@ temporizadores_reconexion = {}
 sids_activos = {}
 desconexiones_por_jugador = {}
 
+def emitir_cola_espera():
+    print(f" Emitiendo cola - Total en espera: {len(cola_espera)}")  # DEBUG
+    cola_info = []
+    for jugador in cola_espera:
+        info = {
+            'id': jugador['id'],
+            'nick': jugador['data'].get('usuario', 'Anónimo'),
+            'tiempo': jugador['data'].get('tiempo', 5),
+            'incremento': jugador['data'].get('incremento', 0)
+        }
+        print(f"   - {info['nick']} ({info['tiempo']}+{info['incremento']}s)")  # DEBUG
+        cola_info.append(info)
+    
+    print(f"📤 Enviando evento 'actualizar_cola_espera' con {len(cola_info)} jugadores")  # DEBUG
+    emit('actualizar_cola_espera', cola_info, broadcast=True)
+    
 # --- RUTAS ---
 @app.route('/')
 def index():
