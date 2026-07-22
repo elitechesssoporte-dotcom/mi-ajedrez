@@ -46,7 +46,60 @@
             background: #c4a028;
             color: black;
         }
-        
+        /* 🆕 Estilos para la lista de jugadores en espera */
+        #seccion-cola {
+            margin-top: 20px;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+            transition: opacity 0.3s;
+        }
+        .titulo-cola {
+            color: #c4a028;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .jugador-cola {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .jugador-cola:hover {
+            border-color: #c4a028;
+            background: #222;
+        }
+        .jugador-info {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+        .jugador-nick {
+            font-weight: bold;
+            color: #fff;
+        }
+        .jugador-ritmo {
+            font-size: 0.85em;
+            color: #888;
+        }
+        .btn-unirse {
+            background: #c4a028;
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-unirse:hover {
+            background: #d4af37;
+        }
 		/* 📱 Adaptación para móvil */
 @media (max-width: 600px) {
     body {
