@@ -145,10 +145,13 @@ def actualizar_elo_db(nick, nuevo_elo, categoria='blitz'):
 # --- EVENTOS SOCKET.IO ---
 
 @socketio.on('connect')
-def handle_connect():
+def handle_connect(auth=None):  # 🆕 Añadido 'auth=None' para evitar el error de argumentos
     sid = request.sid
     sids_activos[sid] = True
-    print(f"✅ Conectado: {sid}")
+    print(f"✅ Conectado: {sid} | Total activos: {len(sids_activos)}")
+    
+    # 🆕 Usamos 'emit' (importado de flask_socketio) en lugar de 'socketio.emit'
+    emit('actualizar_contador', len(sids_activos), broadcast=True)
 
 @socketio.on('disconnect')
 def handle_disconnect():
