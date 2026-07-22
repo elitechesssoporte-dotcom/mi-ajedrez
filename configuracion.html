@@ -234,6 +234,8 @@
          Cancelar búsqueda
     </button>
 </div>
+	
+    <script>
     const socket = io();
     let tiempoElegido = 0;
     let colorElegido = 'random';
@@ -375,6 +377,111 @@
         document.getElementById('btn-cancelar').style.display = 'none';
         console.log('❌ Búsqueda cancelada');
     }
+	    // ============================================
+// 🆕 NUEVO SISTEMA DE COLA DE ESPERA
+// ============================================
+
+let buscandoPartida = false;
+
+// Escuchar actualización de la cola
+socket.on('actualizar_cola_espera', function(cola) {
+    console.log('📡 Cola recibida:', cola);
+    
+    if (buscandoPartida) {
+        console.log('️ No renderizar porque estoy buscando');
+        return;
+    }
+    
+    const lista = document.getElementById('lista-jugadores');
+    if (!lista) {
+        console.error('❌ No existe el elemento #lista-jugadores');
+        return;
+    }
+    
+    const miNick = localStorage.getItem('nickJugador') || 'Anónimo';
+    
+    if (!cola || cola.length === 0) {
+        lista.innerHTML = '<p style="color: #666; font-size: 0.9em; text-align: center;">No hay jugadores en espera.</p>';
+        console.log('ℹ️ Cola vacía');
+        return;
+    }
+    
+    let html = '';
+    let hayOtros = false;
+    
+    cola.forEach(function(jugador) {
+        // No mostrarme a mí mismo
+        if (jugador.nick === miNick) {
+            console.log('⏭️ Saltando mi propio nick:', jugador.nick);
+            return;
+        }
+        
+        hayOtros = true;
+        html += '<div class="jugador-cola" onclick="unirseARival(\'' + jugador.id + '\', \'' + jugador.nick + '\', ' + jugador.tiempo + ', ' + jugador.incremento + ')">';
+        html += '  <div class="jugador-info">';
+        html += '    <span class="jugador-nick">' + jugador.nick + '</span>';
+        html += '    <span class="jugador-ritmo">⏱️ ' + jugador.tiempo + '+' + jugador.incremento + 's</span>';
+        html += '  </div>';
+        html += '  <button class="btn-unirse">Jugar</button>';
+        html += '</div>';
+    });
+    
+    if (hayOtros) {
+        lista.innerHTML = html;
+        console.log('✅ Lista renderizada con ' + cola.length + ' jugadores');
+    } else {
+        lista.innerHTML = '<p style="color: #666; font-size: 0.9em; text-align: center;">No hay otros jugadores en espera.</p>';
+        console.log('ℹ️ No hay otros jugadores (solo yo)');
+    }
+});
+
+// Función para unirse a un rival
+function unirseARival(rivalId, rivalNick, tiempo, incremento) {
+    if (buscandoPartida) {
+        alert('️ Cancela tu búsqueda actual antes de unirte a otro jugador.');
+        return;
+    }
+    
+    if (confirm('¿Quieres jugar una partida de ' + tiempo + '+' + incremento + 's contra ' + rivalNick + '?')) {
+        console.log(' Uniéndose a:', rivalNick);
+        localStorage.setItem('tiempoPartida', tiempo);
+        localStorage.setItem('incrementoPartida', incremento);
+        localStorage.setItem('colorElegido', 'random');
+        
+        socket.emit('unirse_a_rival', { rival_id: rivalId });
+    }
+}
+
+// Manejar error al unirse
+socket.on('error_unirse', function(data) {
+    alert('️ ' + data.mensaje);
+});
+
+// Modificar iniciarPartida para bloquear la lista
+var originalIniciarPartida = iniciarPartida;
+iniciarPartida = function() {
+    originalIniciarPartida();
+    buscandoPartida = true;
+    var seccion = document.getElementById('seccion-cola');
+    if (seccion) {
+        seccion.style.opacity = '0.4';
+        seccion.style.pointerEvents = 'none';
+    }
+};
+
+// Modificar cancelarBusqueda para desbloquear la lista
+var originalCancelarBusqueda = cancelarBusqueda;
+cancelarBusqueda = function() {
+    originalCancelarBusqueda();
+    buscandoPartida = false;
+    var seccion = document.getElementById('seccion-cola');
+    if (seccion) {
+        seccion.style.opacity = '1';
+        seccion.style.pointerEvents = 'auto';
+    }
+};
+
+console.log('✅ Sistema de cola inicializado');
 </script>
 </body>
-
+</html>
