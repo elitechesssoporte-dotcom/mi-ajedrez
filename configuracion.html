@@ -6,6 +6,65 @@
     <title>FighterChess - Configuración</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
+		.jugador-cola {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.jugador-cola:hover {
+    border-color: #c4a028;
+    background: #222;
+    transform: translateX(5px);
+}
+
+.jugador-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    flex: 1;
+}
+
+.jugador-nick {
+    font-weight: bold;
+    color: #fff;
+    font-size: 1.05em;
+}
+
+.jugador-elo {
+    font-size: 0.85em;
+    color: #c4a028;
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.jugador-ritmo {
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 1px;
+}
+
+.btn-unirse {
+    background: #c4a028;
+    color: #000;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.btn-unirse:hover {
+    background: #d4af37;
+}
         body { 
     background: #050505; 
     color: #c0c0c0; 
