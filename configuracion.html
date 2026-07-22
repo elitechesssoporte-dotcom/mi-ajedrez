@@ -182,12 +182,15 @@
 </head>
 <body>
 
+	
 <div class="box">
-    <h2>TIEMPO DE PARTIDA</h2>
+	    <h2>TIEMPO DE PARTIDA</h2>
+    
     <!-- 🆕 NUEVO: Botón/Indicador de jugadores en línea -->
     <button id="btn-contador" class="btn-contador" disabled>
         🟢 Jugadores en línea: <span id="numero-conectados">0</span>
     </button>
+    
     <label>Elige los minutos:</label>
     <div class="grid-tiempos" id="selector-tiempo">
         <button class="btn-tiempo" onclick="seleccionarTiempo(1)">1</button>
@@ -213,6 +216,13 @@
         <button class="btn-tiempo active" onclick="seleccionarColor('random')"> Aleatorio</button>
         <button class="btn-tiempo" onclick="seleccionarColor('black')">♚ Negras</button>
     </div>
+	    <!-- 🆕 NUEVO: Lista de jugadores buscando partida -->
+    <div id="seccion-cola">
+        <h3 class="titulo-cola">👥 Jugadores buscando partida</h3>
+        <div id="lista-jugadores" style="max-height: 200px; overflow-y: auto;">
+            <p style="color: #666; font-size: 0.9em; text-align: center;">No hay jugadores en espera.</p>
+        </div>
+    </div>
 
     <button class="btn-tiempo" onclick="window.location.href='/clasificacion'" style="width:100%; margin-top:15px; margin-bottom:10px;">
          Clasificación
@@ -224,8 +234,6 @@
          Cancelar búsqueda
     </button>
 </div>
-
-<script>
     const socket = io();
     let tiempoElegido = 0;
     let colorElegido = 'random';
