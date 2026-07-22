@@ -193,6 +193,13 @@
         localStorage.clear();
         window.location.href = '/login.html';
     });
+	    // 🆕 NUEVO: Escuchar la actualización del contador desde el servidor
+    socket.on('actualizar_contador', function(cantidad) {
+        const spanContador = document.getElementById('numero-conectados');
+        if (spanContador) {
+            spanContador.innerText = cantidad;
+        }
+    });
 
     function seleccionarTiempo(minutos) {
         tiempoElegido = minutos;
