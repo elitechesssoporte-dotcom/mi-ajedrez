@@ -34,19 +34,25 @@ sids_activos = {}
 desconexiones_por_jugador = {}
 
 def emitir_cola_espera():
-    print(f" Emitiendo cola - Total en espera: {len(cola_espera)}")  # DEBUG
+    print(f" Emitiendo cola - Total en espera: {len(cola_espera)}")
     cola_info = []
     for jugador in cola_espera:
+        nick = jugador['data'].get('usuario', 'Anónimo')
+        tiempo = jugador['data'].get('tiempo', 5)
+        categoria = obtener_categoria(tiempo)
+        elo = obtener_elo(nick, categoria)
+        
         info = {
             'id': jugador['id'],
-            'nick': jugador['data'].get('usuario', 'Anónimo'),
+            'nick': nick,
             'tiempo': jugador['data'].get('tiempo', 5),
-            'incremento': jugador['data'].get('incremento', 0)
+            'incremento': jugador['data'].get('incremento', 0),
+            'elo': elo  # 🆕 Añadimos el ELO
         }
-        print(f"   - {info['nick']} ({info['tiempo']}+{info['incremento']}s)")  # DEBUG
+        print(f"   - {info['nick']} (ELO: {elo}) - {info['tiempo']}+{info['incremento']}s")
         cola_info.append(info)
     
-    print(f"📤 Enviando evento 'actualizar_cola_espera' con {len(cola_info)} jugadores")  # DEBUG
+    print(f" Enviando evento 'actualizar_cola_espera' con {len(cola_info)} jugadores")
     emit('actualizar_cola_espera', cola_info, broadcast=True)
     
 # --- RUTAS ---
