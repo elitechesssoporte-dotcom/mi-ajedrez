@@ -1535,12 +1535,16 @@ def unirse_a_rival(data):
     
     emit('partida_encontrada', {
         'sala': sala_id, 'color': color_rival_final, 'config': config_rival,
-        'rival_nick': nick_mio, 'mi_elo': elo1, 'rival_elo': elo2
+        'rival_nick': nick_mio, 'mi_elo': elo1, 'rival_elo': elo2,
+        'segundos_blanco': tiempo_inicial_segundos,  # 🆕 AÑADIDO
+        'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
     }, room=jugador1['id'])
     
     emit('partida_encontrada', {
         'sala': sala_id, 'color': color_mio_final, 'config': config_mio,
-        'rival_nick': nick_rival, 'mi_elo': elo2, 'rival_elo': elo1
+        'rival_nick': nick_rival, 'mi_elo': elo2, 'rival_elo': elo1,
+        'segundos_blanco': tiempo_inicial_segundos,  # 🆕 AÑADIDO
+        'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
     }, room=jugador2['id'])
     
     print(f"✅ Partida manual creada: {nick_rival} vs {nick_mio} | Sala: {sala_id}")
