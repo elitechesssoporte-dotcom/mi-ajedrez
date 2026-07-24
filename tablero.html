@@ -474,6 +474,56 @@
 
 <script>
     const socket = io();
+	// === SONIDOS DE MADERA LOCALES ===
+let sonidoActivado = true;
+
+// ️ IMPORTANTE: Verifica la extensión de tus archivos (.mp3 o .wav)
+// Haz clic derecho en cada archivo → Propiedades → Tipo de archivo
+const sonidoMadera = new Audio('sounds/freesound-community-knock-on-door-86241_LGzYGu8b.mp3');
+
+sonidoMadera.volume = 0.7;
+sonidoMadera.preload = 'auto';
+
+function reproducirSonido(tipo) {
+    if (!sonidoActivado) return;
+    
+    if (tipo === 'enroque') {
+        //  Enroque: Doble golpe rápido
+        sonidoMadera.currentTime = 0;
+        sonidoMadera.volume = 0.7;
+        sonidoMadera.play().catch(e => console.log('Audio bloqueado'));
+        
+        // Segundo golpe 150ms después
+        setTimeout(() => {
+            sonidoMadera.currentTime = 0;
+            sonidoMadera.play().catch(e => {});
+        }, 150);
+        
+        console.log(' Enroque - doble golpe');
+    } else {
+        // Movimiento normal: Un solo golpe
+        sonidoMadera.currentTime = 0;
+        sonidoMadera.volume = 0.7;
+        sonidoMadera.play().catch(error => {
+            console.log('Audio bloqueado - haz clic primero');
+        });
+    }
+}
+
+// Desbloquear ambos sonidos con el primer clic
+document.addEventListener('click', function desbloquear() {
+    sonidoMadera.volume = 0.01;
+    sonidoMadera.play()
+        .then(() => {
+            console.log('✅ Sonido desbloqueado');
+            sonidoMadera.pause();
+            sonidoMadera.currentTime = 0;
+            sonidoMadera.volume = 0.7;
+        })
+        .catch(err => console.log('⚠️ Error:', err));
+}, { once: true });
+
+console.log('🔊 Sonidos cargados: movimiento + enroque');
 
 
 const salaId = localStorage.getItem('salaId');
@@ -1087,14 +1137,14 @@ socket.on('estado_partida', function(data) {
         resetearNotacion();
     }
     
-    // 4. Actualizar relojes en pantalla
+        // 4. Actualizar relojes en pantalla
     actualizarRelojes();
     actualizarTurno();
     
     // 5. Reanudar reloj si la partida no ha terminado
     if (!data.terminada && !partidaFinalizada) {
-        iniciarReloj();
-        console.log('⏱️ Reloj reanudado tras reconexión');
+        iniciarReloj(); // ✅ El reloj SOLO arranca cuando el servidor confirma el estado
+        console.log('⏱️ Reloj iniciado tras sincronización con el servidor');
     }
 });
 
@@ -1435,19 +1485,18 @@ function onDrop(source, target) {
     if (miColor === 'black' && game.turn() === 'b') esMiTurno = true;
     
     if (!esMiTurno) {
-    premove = { from: source, to: target };
-    premoveActivo = true;
-    
-    console.log('Premovimiento guardado:', source, '->', target);
-    
-    // Aplicar el resaltado DESPUÉS de que chessboard.js termine el snapback
-    setTimeout(function() {
-        resaltarPremove(source, target);
-        console.log('Resalte de premove aplicado:', source, '->', target);
-    }, 200);
-    
-    return 'snapback';
-}
+        premove = { from: source, to: target };
+        premoveActivo = true;
+        
+        console.log('Premovimiento guardado:', source, '->', target);
+        
+        setTimeout(function() {
+            resaltarPremove(source, target);
+            console.log('Resalte de premove aplicado:', source, '->', target);
+        }, 200);
+        
+        return 'snapback';
+    }
     
     var move = game.move({
         from: source,
@@ -1455,13 +1504,33 @@ function onDrop(source, target) {
         promotion: 'q'
     });
     
-    if (move === null) return 'snapback';
+    if (move === null) {
+        reproducirSonido('invalido');  // 🔊 Sonido de movimiento inválido
+        return 'snapback';
+    }
     
     if (move.promotion) {
         game.undo();
         movimientoPendiente = { from: source, to: target };
         mostrarModalPromocion();
         return 'snapback';
+    }
+    
+    //  Reproducir sonido según tipo de movimiento
+    // Reproducir sonido según tipo de movimiento
+if (move.flags === 'k' || move.flags === 'q') {
+    // Enroque (k = corto, q = largo)
+    reproducirSonido('enroque');
+    console.log(' Enroque detectado');
+} else if (move.captured) {
+    reproducirSonido('capturar');
+} else {
+    reproducirSonido('mover');
+}
+    
+    // 🔊 Si hay jaque, reproducir sonido de jaque
+    if (game.in_check()) {
+        setTimeout(() => reproducirSonido('jaque'), 300);
     }
     
     agregarMovimientoANotacion(move);
@@ -1624,6 +1693,8 @@ function comprobarFinDePartida() {
     
     if (game.in_checkmate()) {
         partidaFinalizada = true;
+        reproducirSonido('jaqueMate');  // 🔊 Sonido de jaque mate
+        
         var ganador = game.turn() === 'w' ? 'black' : 'white';
         var ganadorTexto = game.turn() === 'w' ? 'Negras' : 'Blancas';
         
@@ -1637,6 +1708,8 @@ function comprobarFinDePartida() {
     
     if (game.in_draw() || verificarMaterialInsuficiente()) {
         partidaFinalizada = true;
+        reproducirSonido('tablas');  // 🔊 Sonido de tablas
+        
         var motivo = '';
         
         if (game.in_stalemate()) {
@@ -1693,8 +1766,21 @@ function ejecutarPremove() {
         return;
     }
     
+    // ✅ AÑADE EL SONIDO AQUÍ:
+    if (move.flags === 'k' || move.flags === 'q') {
+        reproducirSonido('enroque');
+    } else if (move.captured) {
+        reproducirSonido('capturar');
+    } else {
+        reproducirSonido('mover');
+    }
+    
+    if (game.in_check()) {
+        setTimeout(() => reproducirSonido('jaque'), 300);
+    }
+    
     agregarMovimientoANotacion(move);
-    aplicarIncremento(miColor);
+    aplicarIncremento(miColor);  
     
     socket.emit('mover_pieza', {
         sala: salaId,
@@ -1888,18 +1974,19 @@ function habilitarBotonesPartida() {
             pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
         };
         
-        board = Chessboard('board', config);
+                board = Chessboard('board', config);
         
         console.log('Tablero inicializado');
         console.log('Orientación:', miColor);
         
-        actualizarRelojes();
-        iniciarReloj();
+        actualizarRelojes(); // Solo muestra el tiempo inicial visualmente
+        // iniciarReloj();    // ❌ ELIMINADO: Esperaremos a la confirmación del servidor
         actualizarTurno();
         actualizarBotonesReproduccion();
         
         document.getElementById('btnSalir').disabled = true;
-    });
+		// 🔊 Debug de sonidos
+console.log('🔊 Sistema de sonidos inicializado');
 
 document.addEventListener('touchmove', function(e) {
     if (e.target.closest('#board')) {
@@ -1927,8 +2014,9 @@ function ajustarTableroMovil() {
 window.addEventListener('resize', ajustarTableroMovil);
 window.addEventListener('load', ajustarTableroMovil);
 ajustarTableroMovil();
-	
-</script>
 
+});
+
+</script>
 </body>
 </html>
