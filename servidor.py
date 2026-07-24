@@ -638,7 +638,7 @@ def buscar_partida(data):
     if len(cola_espera) > 0:
         for i, rival in enumerate(cola_espera):
             if rival['data'].get('usuario', '').lower() == usuario.lower():
-                print(f"️ {usuario} intentando jugar contra sí mismo")
+                print(f"⚠️ {usuario} intentando jugar contra sí mismo")
                 continue
             
             tiempo_rival = rival['data'].get('tiempo', 0)
@@ -647,7 +647,7 @@ def buscar_partida(data):
             incremento_mio = data.get('incremento', 0)
             
             if tiempo_rival != tiempo_mio or incremento_rival != incremento_mio:
-                print(f" {usuario} ({tiempo_mio}+{incremento_mio}s) no coincide con {rival['data'].get('usuario')} ({tiempo_rival}+{incremento_rival}s)")
+                print(f"⚠️ {usuario} ({tiempo_mio}+{incremento_mio}s) no coincide con {rival['data'].get('usuario')} ({tiempo_rival}+{incremento_rival}s)")
                 continue
             
             rival_color = rival['data']['color']
@@ -673,6 +673,7 @@ def buscar_partida(data):
                     color_rival_final = rival_color
                     color_mio_final = mi_color
             
+            # --- AQUÍ SE CREA LA SALA Y sala_id ---
             cola_espera.pop(i)
             sala_id = str(uuid.uuid4())
             
@@ -709,43 +710,43 @@ def buscar_partida(data):
             elo1 = obtener_elo(jugador1['nick'], categoria)
             elo2 = obtener_elo(jugador2['nick'], categoria)
             
-            tiempo_inicial_segundos = data.get('tiempo', 5) * 60  # Aseguramos la variable
-        
-        emit('partida_encontrada', {
-            'sala': sala_id,
-            'color': color_rival_final,
-            'config': data,
-            'rival_nick': usuario,
-            'mi_elo': elo1,
-            'rival_elo': elo2,
-            'segundos_blanco': tiempo_inicial_segundos,  # 🆕 AÑADIDO
-            'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
-        }, room=jugador1['id'])
-        
-        emit('partida_encontrada', {
-            'sala': sala_id,
-            'color': color_mio_final,
-            'config': data,
-            'rival_nick': rival['data'].get('usuario', 'Anónimo'),
-            'mi_elo': elo2,
-            'rival_elo': elo1,
-            'segundos_blanco': tiempo_inicial_segundos,  # 🆕 AÑADIDO
-            'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
-        }, room=jugador2['id'])
+            # --- EMITIR DENTRO DEL BLOQUE DONDE sala_id YA EXISTE ---
+            emit('partida_encontrada', {
+                'sala': sala_id,
+                'color': color_rival_final,
+                'config': data,
+                'rival_nick': usuario,
+                'mi_elo': elo1,
+                'rival_elo': elo2,
+                'segundos_blanco': tiempo_inicial_segundos,
+                'segundos_negro': tiempo_inicial_segundos
+            }, room=jugador1['id'])
             
-        print(f"✅ Partida creada: {jugador1['nick']} vs {jugador2['nick']} | Sala: {sala_id}")
-        emitir_cola_espera()  # 🆕 Avisar que la cola cambió
-        return
+            emit('partida_encontrada', {
+                'sala': sala_id,
+                'color': color_mio_final,
+                'config': data,
+                'rival_nick': rival['data'].get('usuario', 'Anónimo'),
+                'mi_elo': elo2,
+                'rival_elo': elo1,
+                'segundos_blanco': tiempo_inicial_segundos,
+                'segundos_negro': tiempo_inicial_segundos
+            }, room=jugador2['id'])
+            
+            print(f"✅ Partida creada: {jugador1['nick']} vs {jugador2['nick']} | Sala: {sala_id}")
+            emitir_cola_espera()
+            return  # <--- IMPORTANTE: Salir de la función aquí
         
+        # Si el bucle termina sin encontrar rival (ej: todos tienen el mismo color)
         cola_espera.append({'id': jugador_id, 'data': data})
         emit('esperando_rival', {'mensaje': f'Esperando rival que elija {data.get("tiempo", 5)} minutos...'})
         print(f"⏳ Jugador {usuario} en cola esperando rival con {data.get('tiempo', 5)} min")
-        emitir_cola_espera()  # 🆕 Avisar que se añadió a la cola
+        emitir_cola_espera()
     else:
         cola_espera.append({'id': jugador_id, 'data': data})
         emit('esperando_rival', {'mensaje': 'Esperando a que se conecte un rival...'})
         print(f"⏳ Jugador {usuario} en cola de espera")
-        emitir_cola_espera()  # 🆕 Avisar que se añadió a la cola
+        emitir_cola_espera()
 @socketio.on('pedir_cola_espera')
 def pedir_cola_espera():
     print(f"📋 Alguien pidió la cola manualmente")
