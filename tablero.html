@@ -441,6 +441,8 @@
     <!-- Panel de notación y controles a la derecha -->
     <div class="area-notacion">
         <div class="panel-notacion">
+		<!-- 🆕 ESPACIO PARA NOMBRE DE APERTURA -->
+<div id="nombre-apertura" style="color: #c4a028; text-align: center; font-size: 0.95em; margin-bottom: 8px; font-weight: bold;"></div>
             <div class="notacion-header">📜 NOTACIÓN</div>
             <div class="notacion-contenido" id="notacionContenido">
                 <div style="color: #888; text-align: center; padding: 20px;">
@@ -679,6 +681,8 @@ socket.on('connect', function() {
         posicionActual = listaMovimientos.length * 2 - (listaMovimientos[listaMovimientos.length - 1].negras ? 0 : 1);
         actualizarPanelNotacion();
         actualizarBotonesReproduccion();
+		// 🆕 AÑADE ESTO AL FINAL:
+    detectarApertura();
     }
     function anadirResultadoANotacion(resultado) {
     var contenido = document.getElementById('notacionContenido');
@@ -1146,6 +1150,8 @@ socket.on('estado_partida', function(data) {
         iniciarReloj(); // ✅ El reloj SOLO arranca cuando el servidor confirma el estado
         console.log('⏱️ Reloj iniciado tras sincronización con el servidor');
     }
+	// 🆕 6. DETECTAR Y MOSTRAR LA APERTURA (al reconectar o cargar partida)
+    setTimeout(detectarApertura, 200);
 });
 
 socket.on('oferta_tablas', function() {
@@ -2016,7 +2022,61 @@ window.addEventListener('load', ajustarTableroMovil);
 ajustarTableroMovil();
 
 });
+// === DICCIONARIO DE APERTURAS (solo las más importantes) ===
+const aperturasConocidas = {
+    "e4 e5 Nf3 Nc6 Bb5": "Ruy López",
+    "e4 e5 Nf3 Nc6 Bc4": "Italiana",
+    "e4 e5 Nf3 Nc6 d4": "Escocesa",
+    "e4 e5 Nf3 Nc6 Nc3 Nf6": "Cuatro Caballos",
+    "e4 e5 Nf3 Nc6 Nc3": "Tres Caballos",
+    "e4 e5 Nf3 Nf6": "Petrov",
+    "e4 e5 Nf3 d6": "Philidor",
+    "e4 c5": "Siciliana",
+    "e4 c6": "Caro-Kann",
+    "e4 e6": "Francesa",
+    "e4 d5": "Escandinava",
+    "e4 d6": "Pirc",
+    "e4 g6": "Moderna",
+    "e4 Nf6": "Alekhine",
+    "d4 d5": "Peón de Dama",
+    "d4 d5 c4": "Gambito de Dama",
+    "d4 Nf6 c4 g6": "India de Rey",
+    "d4 Nf6 c4 e6": "India de Dama",
+    "c4": "Inglesa",
+    "Nf3": "Réti",
+    "b3": "Larsen",
+    "g3": "Fianchetto",
+    "f4": "Bird",
+    "b4": "Orángután",
+    "g4": "Grob",
+    "Nc3": "Dunst",
+    "a3": "Anderssen",
+    "h3": "Desprez"
+};
+
+// === FUNCIÓN PARA DETECTAR LA APERTURA ===
+function detectarApertura() {
+    const historia = game.history().join(' ');
+    let nombreApertura = '';
+    
+    // Buscar coincidencia más larga (ej: "e4 c5" antes que "e4")
+    const clavesOrdenadas = Object.keys(aperturasConocidas).sort((a, b) => b.length - a.length);
+    
+    for (let clave of clavesOrdenadas) {
+        if (historia.startsWith(clave)) {
+            nombreApertura = aperturasConocidas[clave];
+            break;
+        }
+    }
+    
+    // Mostrar el nombre en pantalla
+    const elemento = document.getElementById('nombre-apertura');
+    if (elemento) {
+        elemento.innerText = nombreApertura || 'Apertura no identificada';
+    }
+}
 
 </script>
+
 </body>
 </html>
