@@ -6,7 +6,7 @@
     <title>FighterChess - Configuración</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-		.jugador-cola {
+	.jugador-cola {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -397,13 +397,18 @@ input {
     let colorElegido = 'random';
     let tiempoPersonalizadoActivo = false;
 	
-    // Re-registrar sesión al conectar
+        // Re-registrar sesión al conectar
     socket.on('connect', function() {
         const nickGuardado = localStorage.getItem('nickJugador');
         if (nickGuardado) {
             console.log('🔄 Re-registrando sesión de:', nickGuardado);
             socket.emit('reconectar_sesion', { nick: nickGuardado });
         }
+        
+        // 🆕 IMPORTANTE: Pedir la lista actualizada de la cola al reconectar
+        // Esto soluciona que desaparezca al volver de otra página
+        console.log('📡 Solicitando lista actualizada de la cola...');
+        socket.emit('pedir_cola_espera');
     });
 
     // NUEVO: Escuchar si nos desconectan por login en otro dispositivo
@@ -602,6 +607,7 @@ socket.on('actualizar_cola_espera', function(cola) {
         lista.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay otros jugadores en espera.</p>';
     }
 });
+
 // Función para unirse a un rival
 function unirseARival(rivalId, rivalNick, tiempo, incremento) {
     if (buscandoPartida) {
