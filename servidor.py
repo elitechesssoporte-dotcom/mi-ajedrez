@@ -47,9 +47,10 @@ def emitir_cola_espera():
             'nick': nick,
             'tiempo': jugador['data'].get('tiempo', 5),
             'incremento': jugador['data'].get('incremento', 0),
-            'elo': elo  # 🆕 Añadimos el ELO
+            'elo': elo,
+            'color': jugador['data'].get('color', 'random')  #  AÑADIDO
         }
-        print(f"   - {info['nick']} (ELO: {elo}) - {info['tiempo']}+{info['incremento']}s")
+        print(f"   - {info['nick']} (ELO: {elo}) - {info['tiempo']}+{info['incremento']}s - Color: {info['color']}")
         cola_info.append(info)
     
     print(f" Enviando evento 'actualizar_cola_espera' con {len(cola_info)} jugadores")
