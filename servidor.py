@@ -733,9 +733,9 @@ def buscar_partida(data):
             'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
         }, room=jugador2['id'])
             
-            print(f"✅ Partida creada: {jugador1['nick']} vs {jugador2['nick']} | Sala: {sala_id}")
-            emitir_cola_espera()  # 🆕 Avisar que la cola cambió
-            return
+        print(f"✅ Partida creada: {jugador1['nick']} vs {jugador2['nick']} | Sala: {sala_id}")
+        emitir_cola_espera()  # 🆕 Avisar que la cola cambió
+        return
         
         cola_espera.append({'id': jugador_id, 'data': data})
         emit('esperando_rival', {'mensaje': f'Esperando rival que elija {data.get("tiempo", 5)} minutos...'})
