@@ -709,23 +709,29 @@ def buscar_partida(data):
             elo1 = obtener_elo(jugador1['nick'], categoria)
             elo2 = obtener_elo(jugador2['nick'], categoria)
             
-            emit('partida_encontrada', {
-                'sala': sala_id,
-                'color': color_rival_final,
-                'config': data,
-                'rival_nick': usuario,
-                'mi_elo': elo1,
-                'rival_elo': elo2
-            }, room=jugador1['id'])
-            
-            emit('partida_encontrada', {
-                'sala': sala_id,
-                'color': color_mio_final,
-                'config': data,
-                'rival_nick': rival['data'].get('usuario', 'Anónimo'),
-                'mi_elo': elo2,
-                'rival_elo': elo1
-            }, room=jugador2['id'])
+            tiempo_inicial_segundos = data.get('tiempo', 5) * 60  # Aseguramos la variable
+        
+        emit('partida_encontrada', {
+            'sala': sala_id,
+            'color': color_rival_final,
+            'config': data,
+            'rival_nick': usuario,
+            'mi_elo': elo1,
+            'rival_elo': elo2,
+            'segundos_blanco': tiempo_inicial_segundos,  # 🆕 AÑADIDO
+            'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
+        }, room=jugador1['id'])
+        
+        emit('partida_encontrada', {
+            'sala': sala_id,
+            'color': color_mio_final,
+            'config': data,
+            'rival_nick': rival['data'].get('usuario', 'Anónimo'),
+            'mi_elo': elo2,
+            'rival_elo': elo1,
+            'segundos_blanco': tiempo_inicial_segundos,  # 🆕 AÑADIDO
+            'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
+        }, room=jugador2['id'])
             
             print(f"✅ Partida creada: {jugador1['nick']} vs {jugador2['nick']} | Sala: {sala_id}")
             emitir_cola_espera()  # 🆕 Avisar que la cola cambió
