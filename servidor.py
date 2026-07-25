@@ -878,7 +878,66 @@ def mover_pieza(data):
         
         emit('recibir_movimiento', {
             'movimiento': movimiento
-        }, room=sala_id, include_self=False)
+        }, room=sala_id, include_self=False)        
+
+@socketio.on('cancelar_partida')
+def cancelar_partida(data):
+    sala_id = data.get('sala')
+    nick = data.get('nick')
+    
+    if not sala_id or sala_id not in salas:
+        emit('error_cancelar', {'mensaje': 'Partida no encontrada'})
+        return
+    
+    partida = salas[sala_id]
+    nb = partida.get('blanco')
+    nn = partida.get('negro')
+    
+    # Contar cuántos movimientos se han hecho en total
+    num_movimientos = 0
+    if sala_id in estado_partidas and 'movimientos' in estado_partidas[sala_id]:
+        num_movimientos = len(estado_partidas[sala_id]['movimientos'])
+    
+    # Verificar si el jugador que intenta cancelar YA hizo su primera jugada
+    if nick == nb and num_movimientos >= 1:
+        emit('error_cancelar', {'mensaje': 'Ya has hecho tu primera jugada, no puedes cancelar.'})
+        return
+    elif nick == nn and num_movimientos >= 2:
+        emit('error_cancelar', {'mensaje': 'Ya has hecho tu primera jugada, no puedes cancelar.'})
+        return
+    
+    print(f"🚪 {nick} cancela la partida en sala {sala_id} (Movimientos totales: {num_movimientos})")
+    
+    sid_blanco = usuarios_conectados.get(nb)
+    sid_negro = usuarios_conectados.get(nn)
+    
+    # Notificar al rival
+    rival_sid = sid_negro if nick == nb else sid_blanco
+    if rival_sid and rival_sid in sids_activos:
+        emit('partida_cancelada', {
+            'mensaje': 'Tu rival canceló la partida. Vuelves a la sala de espera.'
+        }, room=rival_sid)
+    
+    # Limpiar la partida de las variables globales (sin tocar ELO)
+    if sala_id in salas:
+        del salas[sala_id]
+    if sala_id in estado_partidas:
+        del estado_partidas[sala_id]
+    if sala_id in control_tablas:
+        del control_tablas[sala_id]
+    
+    # Limpiar registros de partida activa para ambos jugadores
+    if nb in partidas_activas: del partidas_activas[nb]
+    if nn in partidas_activas: del partidas_activas[nn]
+    if sid_blanco and sid_blanco in partidas_activas: del partidas_activas[sid_blanco]
+    if sid_negro and sid_negro in partidas_activas: del partidas_activas[sid_negro]
+    
+    # Confirmar al jugador que canceló
+    emit('partida_cancelada', {
+        'mensaje': 'Partida cancelada. No hubo penalización de ELO.'
+    })
+    
+    print(f"✅ Partida {sala_id} cancelada sin penalización y limpiada correctamente")
 
 @socketio.on('fin_partida')
 def fin_partida(data):
