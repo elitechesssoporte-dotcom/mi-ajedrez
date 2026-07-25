@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<!-- Código para que sea una App (PWA) -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#050505">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - FighterChess</title>
@@ -150,6 +154,15 @@
             entrarAlJuego();
         }
     });
+	<!-- Registrar la App en el navegador -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('✅ App registrada correctamente'))
+        .catch(err => console.log('❌ Error al registrar la app:', err));
+    });
+  }
 </script>
 
 </body>
