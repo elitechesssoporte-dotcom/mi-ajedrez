@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<!-- Código para que sea una App (PWA) -->
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#050505">
-<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    <!-- Código para que sea una App (PWA) -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - FighterChess</title>
@@ -71,9 +72,24 @@
     </div>
 </div>
 
+<!-- Script principal del juego -->
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-    const socket = io();
+    // Conexión explícita y con detección de errores para móviles/PWA
+    const socket = io('https://www.fighterchess.es', { 
+        transports: ['websocket', 'polling'],
+        timeout: 10000 
+    });
+
+    socket.on('connect', () => {
+        console.log('✅ Conectado al servidor correctamente');
+    });
+
+    socket.on('connect_error', (err) => {
+        console.error('❌ Error de conexión:', err);
+        alert('⚠️ No se pudo conectar al servidor. Revisa tu conexión a internet o intenta de nuevo en unos segundos.');
+    });
+
     let nickGlobal = '';
 
     function entrarAlJuego() {
@@ -115,7 +131,6 @@
             localStorage.setItem('nickJugador', data.nick);
             localStorage.setItem('userId', data.userId);
             
-            // 🆕 NUEVO: Guardar el país en el navegador
             if (data.pais) {
                 localStorage.setItem('paisJugador', data.pais);
                 console.log('🌍 País guardado:', data.pais);
@@ -138,7 +153,7 @@
     });
 
     socket.on('sesion_cerrada', function(data) {
-        alert('️ ' + data.mensaje);
+        alert('⚠️ ' + data.mensaje);
         localStorage.clear();
         window.location.href = '/login.html';
     });
@@ -154,7 +169,9 @@
             entrarAlJuego();
         }
     });
-	<!-- Registrar la App en el navegador -->
+</script>
+
+<!-- Registrar la App en el navegador (PWA) -->
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
