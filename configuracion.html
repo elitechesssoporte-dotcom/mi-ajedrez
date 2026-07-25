@@ -51,6 +51,12 @@
             margin-top: 1px;
         }
 
+        .jugador-pais {
+            font-size: 0.85em;
+            color: #c4a028;
+            margin-top: 2px;
+        }
+
         .btn-unirse {
             background: #c4a028;
             color: #000;
@@ -337,17 +343,36 @@
     let colorElegido = 'random';
     let tiempoPersonalizadoActivo = false;
     let buscandoPartida = false;
+    
+    //  DICCIONARIO DE BANDERAS
+    // 🏁 DICCIONARIO DE BANDERAS (CORREGIDO)
+const banderas = {
+    'ES': '🇪🇸',  // ← AQUÍ ESTABA EL ERROR: tenía '🇸'
+    'MX': '🇽',
+    'AR': '🇦🇷',
+    'CO': '🇨🇴',
+    'CL': '🇨🇱',
+    'PE': '🇵🇪',
+    'US': '🇺🇸',
+    'GB': '🇬🇧',
+    'FR': '🇫',
+    'DE': '🇩',
+    'IT': '🇮🇹',
+    'BR': '🇷',
+    'PT': '🇹',
+    'OT': '🌍'
+};
 	
     // Re-registrar sesión al conectar
     socket.on('connect', function() {
         const nickGuardado = localStorage.getItem('nickJugador');
+        const paisGuardado = localStorage.getItem('paisJugador');
         if (nickGuardado) {
             console.log('🔄 Re-registrando sesión de:', nickGuardado);
-            socket.emit('reconectar_sesion', { nick: nickGuardado });
+            socket.emit('reconectar_sesion', { nick: nickGuardado, pais: paisGuardado });
         }
         
-        // 🆕 Pedir la lista actualizada al reconectar
-        console.log(' Solicitando lista actualizada de la cola...');
+        console.log('📡 Solicitando lista actualizada de la cola...');
         socket.emit('pedir_cola_espera');
     });
 
@@ -371,7 +396,6 @@
         document.querySelectorAll('#selector-tiempo .btn-tiempo').forEach(b => b.classList.remove('active'));
         event.target.classList.add('active');
         
-        // 🆕 Mostrar selector de color al elegir tiempo
         document.getElementById('selector-color').style.display = 'grid';
         console.log('️ Tiempo seleccionado:', minutos, 'minutos');
     }
@@ -387,7 +411,6 @@
             document.querySelectorAll('#selector-tiempo .btn-tiempo').forEach(b => b.classList.remove('active'));
             document.getElementById('btnMinutos').classList.add('active');
             
-            // 🆕 Mostrar selector de color al elegir tiempo personalizado
             document.getElementById('selector-color').style.display = 'grid';
             
             console.log('⏱️ Tiempo personalizado:', tiempoElegido, 'minutos');
@@ -427,12 +450,14 @@
         localStorage.setItem('colorElegido', colorElegido);
 
         let nickJugador = localStorage.getItem('nickJugador') || 'Anónimo';
+        let paisJugador = localStorage.getItem('paisJugador') || 'ES';
 
         socket.emit('buscar_partida', {
             tiempo: tiempoElegido,
             incremento: incremento,
             color: colorElegido,
-            usuario: nickJugador
+            usuario: nickJugador,
+            pais: paisJugador
         });
     }
 
@@ -457,7 +482,7 @@
     });
 
     socket.on('esperando_rival', function(data) {
-        console.log('', data.mensaje);
+        console.log('⏳', data.mensaje);
         document.getElementById('mensaje-espera').innerText = '⏳ ' + data.mensaje;
     });
     
@@ -471,82 +496,84 @@
     }
 
     // ============================================
-    // 🆕 SISTEMA DE COLA DE ESPERA MEJORADO
+    // 🏁 SISTEMA DE COLA DE ESPERA CON BANDERAS
     // ============================================
 
     socket.on('actualizar_cola_espera', function(cola) {
-    console.log('📡 Cola recibida:', cola);
-    
-    const lista = document.getElementById('lista-jugadores');
-    if (!lista) {
-        console.error('❌ No existe el elemento #lista-jugadores');
-        return;
-    }
-    
-    const miNick = localStorage.getItem('nickJugador') || 'Anónimo';
-    
-    if (!cola || cola.length === 0) {
-        lista.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay jugadores en espera.</p>';
-        return;
-    }
-    
-    let html = '';
-    let hayOtros = false;
-    
-    cola.forEach(function(jugador) {
-        if (jugador.nick === miNick) {
+        console.log('📡 Cola recibida:', cola);
+        
+        const lista = document.getElementById('lista-jugadores');
+        if (!lista) {
+            console.error('❌ No existe el elemento #lista-jugadores');
             return;
         }
         
-        hayOtros = true;
+        const miNick = localStorage.getItem('nickJugador') || 'Anónimo';
         
-        var eloClass = '';
-        var elo = jugador.elo || 1200;
-        if (elo < 1000) {
-            eloClass = '#888';
-        } else if (elo < 1400) {
-            eloClass = '#4CAF50';
-        } else if (elo < 1800) {
-            eloClass = '#2196F3';
-        } else if (elo < 2200) {
-            eloClass = '#ff9800';
-        } else {
-            eloClass = '#f44336';
+        if (!cola || cola.length === 0) {
+            lista.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay jugadores en espera.</p>';
+            return;
         }
         
-        // 🆕 Determinar el texto e icono del color
-        var colorTexto = '';
-        var colorIcono = '';
-        if (jugador.color === 'white') {
-            colorTexto = 'Blancas';
-            colorIcono = '♔';
-        } else if (jugador.color === 'black') {
-            colorTexto = 'Negras';
-            colorIcono = '♚';
-        } else {
-            colorTexto = 'Aleatorio';
-            colorIcono = '🎲';
-        }
+        let html = '';
+        let hayOtros = false;
         
-        html += '<div class="jugador-cola" onclick="unirseARival(\'' + jugador.id + '\', \'' + jugador.nick + '\', ' + jugador.tiempo + ', ' + jugador.incremento + ')">';
-        html += '  <div class="jugador-info">';
-        html += '    <span class="jugador-nick">' + jugador.nick + '</span>';
-        html += '    <span class="jugador-elo" style="color: ' + eloClass + '">🏆 ELO: ' + elo + '</span>';
-        html += '    <span class="jugador-ritmo">⏱️ ' + jugador.tiempo + '+' + jugador.incremento + 's</span>';
-        html += '    <span class="jugador-color" style="color: #c4a028; font-size: 0.85em; margin-top: 2px;">' + colorIcono + ' ' + colorTexto + '</span>';
-        html += '  </div>';
-        html += '  <button class="btn-unirse">Jugar</button>';
-        html += '</div>';
+        cola.forEach(function(jugador) {
+            if (jugador.nick === miNick) {
+                return;
+            }
+            
+            hayOtros = true;
+            
+            var eloClass = '';
+            var elo = jugador.elo || 1200;
+            if (elo < 1000) {
+                eloClass = '#888';
+            } else if (elo < 1400) {
+                eloClass = '#4CAF50';
+            } else if (elo < 1800) {
+                eloClass = '#2196F3';
+            } else if (elo < 2200) {
+                eloClass = '#ff9800';
+            } else {
+                eloClass = '#f44336';
+            }
+            
+            // 🏁 OBTENER BANDERA DEL PAÍS
+            var pais = jugador.pais || 'OT';
+            var bandera = banderas[pais] || '🌍';
+            
+            var colorTexto = '';
+            var colorIcono = '';
+            if (jugador.color === 'white') {
+                colorTexto = 'Blancas';
+                colorIcono = '♔';
+            } else if (jugador.color === 'black') {
+                colorTexto = 'Negras';
+                colorIcono = '♚';
+            } else {
+                colorTexto = 'Aleatorio';
+                colorIcono = '🎲';
+            }
+            
+            html += '<div class="jugador-cola" onclick="unirseARival(\'' + jugador.id + '\', \'' + jugador.nick + '\', ' + jugador.tiempo + ', ' + jugador.incremento + ')">';
+            html += '  <div class="jugador-info">';
+            html += '    <span class="jugador-nick">' + bandera + ' ' + jugador.nick + '</span>';
+            html += '    <span class="jugador-elo" style="color: ' + eloClass + '">🏆 ELO: ' + elo + '</span>';
+            html += '    <span class="jugador-ritmo">⏱️ ' + jugador.tiempo + '+' + jugador.incremento + 's</span>';
+            html += '    <span class="jugador-pais">' + colorIcono + ' ' + colorTexto + '</span>';
+            html += '  </div>';
+            html += '  <button class="btn-unirse">Jugar</button>';
+            html += '</div>';
+        });
+        
+        if (hayOtros) {
+            lista.innerHTML = html;
+            console.log('✅ Lista renderizada con ' + cola.length + ' jugadores');
+        } else {
+            lista.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay otros jugadores en espera.</p>';
+        }
     });
-    
-    if (hayOtros) {
-        lista.innerHTML = html;
-        console.log('✅ Lista renderizada con ' + cola.length + ' jugadores');
-    } else {
-        lista.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay otros jugadores en espera.</p>';
-    }
-});
-        
 
     function unirseARival(rivalId, rivalNick, tiempo, incremento) {
         if (buscandoPartida) {
@@ -566,14 +593,12 @@
         alert('⚠️ ' + data.mensaje);
     });
 
-    // Modificar iniciarPartida para bloquear la lista
     var originalIniciarPartida = iniciarPartida;
     iniciarPartida = function() {
         originalIniciarPartida();
         buscandoPartida = true;
     };
 
-    // Modificar cancelarBusqueda para desbloquear la lista
     var originalCancelarBusqueda = cancelarBusqueda;
     cancelarBusqueda = function() {
         originalCancelarBusqueda();
