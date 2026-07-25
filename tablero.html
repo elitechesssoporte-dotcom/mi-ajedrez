@@ -417,6 +417,9 @@
     <div class="area-botones">
         <button class="btn-partida btn-revancha" onclick="ofrecerRevancha()">🔄 Revancha</button>
         <button class="btn-partida btn-tablas" onclick="ofrecerTablas()">🤝 Tablas</button>
+		<button id="btn-cancelar-partida" onclick="cancelarPartida()" style="background: #ff9800; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;">
+    🚪 Cancelar partida
+</button>
         <button class="btn-partida btn-abandonar" onclick="abandonarPartida()">🏳️ Abandonar</button>
 		<button class="btn-partida btn-salir" id="btnSalir" onclick="salirAlMenu()" disabled>🏠 Salir al Menú</button>
     </div>
@@ -683,6 +686,7 @@ socket.on('connect', function() {
         actualizarBotonesReproduccion();
 		// 🆕 AÑADE ESTO AL FINAL:
     detectarApertura();
+	actualizarBotonCancelar();
     }
     function anadirResultadoANotacion(resultado) {
     var contenido = document.getElementById('notacionContenido');
@@ -2075,6 +2079,109 @@ function detectarApertura() {
         elemento.innerText = nombreApertura || 'Apertura no identificada';
     }
 }
+// === FUNCIÓN PARA CANCELAR PARTIDA ===
+function cancelarPartida() {
+    const miColor = localStorage.getItem('miColor');
+    const movimientosTotales = game.history().length;
+    
+    let yaHeMovido = false;
+    if (miColor === 'white' && movimientosTotales >= 1) yaHeMovido = true;
+    else if (miColor === 'black' && movimientosTotales >= 2) yaHeMovido = true;
+    
+    if (yaHeMovido) {
+        alert('⚠️ Ya has hecho tu primera jugada, no puedes cancelar la partida.');
+        return;
+    }
+    
+    if (confirm('¿Seguro que quieres cancelar la partida? No habrá penalización de ELO y volverás a la sala de espera.')) {
+        socket.emit('cancelar_partida', {
+            sala: localStorage.getItem('salaId'),
+            nick: localStorage.getItem('nickJugador')
+        });
+    }
+}
+
+// === ESCUCHAR CONFIRMACIÓN DE CANCELACIÓN ===
+socket.on('partida_cancelada', function(data) {
+    alert('🚪 ' + data.mensaje);
+    localStorage.removeItem('salaId');
+    localStorage.removeItem('miColor');
+    localStorage.removeItem('rivalNick');
+    window.location.href = 'configuracion.html';
+});
+
+// === ESCUCHAR ERROR SI YA ES TARDE PARA CANCELAR ===
+socket.on('error_cancelar', function(data) {
+    alert('⚠️ ' + data.mensaje);
+});
+
+// === DESACTIVAR BOTÓN CUANDO EL JUGADOR HACE SU PRIMERA JUGADA ===
+function actualizarBotonCancelar() {
+    const btnCancelar = document.getElementById('btn-cancelar-partida');
+    if (!btnCancelar) return;
+    
+    const miColor = localStorage.getItem('miColor'); // 'white' o 'black'
+    const movimientosTotales = game.history().length;
+    
+    let yaHeMovido = false;
+    
+    // Si soy blancas, ya he movido si hay 1 o más movimientos en el historial
+    if (miColor === 'white' && movimientosTotales >= 1) {
+        yaHeMovido = true;
+    } 
+    // Si soy negras, ya he movido si hay 2 o más movimientos en el historial
+    else if (miColor === 'black' && movimientosTotales >= 2) {
+        yaHeMovido = true;
+    }
+    
+    if (yaHeMovido) {
+        // Se "apaga" visualmente pero mantiene el texto
+        btnCancelar.disabled = true;
+        btnCancelar.style.opacity = '0.3'; 
+        btnCancelar.style.cursor = 'not-allowed';
+    } else {
+        // Totalmente visible y clicable
+        btnCancelar.disabled = false;
+        btnCancelar.style.opacity = '1'; 
+        btnCancelar.style.cursor = 'pointer';
+    }
+}
+
+// === DESACTIVAR BOTÓN CUANDO EL JUGADOR HACE SU PRIMERA JUGADA ===
+function actualizarBotonCancelar() {
+    const btnCancelar = document.getElementById('btn-cancelar-partida');
+    if (!btnCancelar) return;
+    
+    const miColor = localStorage.getItem('miColor'); // 'white' o 'black'
+    const movimientosTotales = game.history().length;
+    
+    let yaHeMovido = false;
+    
+    // Si soy blancas, ya he movido si hay 1 o más movimientos en el historial
+    if (miColor === 'white' && movimientosTotales >= 1) {
+        yaHeMovido = true;
+    } 
+    // Si soy negras, ya he movido si hay 2 o más movimientos en el historial
+    else if (miColor === 'black' && movimientosTotales >= 2) {
+        yaHeMovido = true;
+    }
+    
+    if (yaHeMovido) {
+        // Se "apaga" visualmente pero mantiene el texto
+        btnCancelar.disabled = true;
+        btnCancelar.style.opacity = '0.3'; 
+        btnCancelar.style.cursor = 'not-allowed';
+    } else {
+        // Totalmente visible y clicable
+        btnCancelar.disabled = false;
+        btnCancelar.style.opacity = '1'; 
+        btnCancelar.style.cursor = 'pointer';
+    }
+}
+
+// Llamar a esta función después de cada movimiento
+// Busca la función agregarMovimientoANotacion y añade al final:
+// actualizarBotonCancelar();
 
 </script>
 
