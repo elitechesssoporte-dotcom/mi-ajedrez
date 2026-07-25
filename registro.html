@@ -18,9 +18,10 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         h2 { color: #d4af37; margin-bottom: 25px; font-weight: 300; }
-        input { 
+        input, select { 
             padding: 12px; margin: 10px 0; width: 100%; border-radius: 6px; 
             border: 1px solid #444; background: #0a0a0a; color: white;
+            font-family: 'Inter', sans-serif;
         }
         button { 
             padding: 12px; background: #d4af37; border: none; cursor: pointer; 
@@ -40,6 +41,14 @@
         .enlace a:hover {
             text-decoration: underline;
         }
+        label {
+            display: block;
+            text-align: left;
+            color: #d4af37;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -49,6 +58,25 @@
     <input type="text" id="nick" placeholder="Tu Nickname" autofocus>
     <input type="password" id="password" placeholder="Contraseña">
     <input type="password" id="password2" placeholder="Repite la contraseña">
+    
+    <label for="pais">País:</label>
+    <select id="pais">
+        <option value="ES">🇪🇸 España</option>
+        <option value="MX">🇲🇽 México</option>
+        <option value="AR">🇦🇷 Argentina</option>
+        <option value="CO">🇨🇴 Colombia</option>
+        <option value="CL">🇨🇱 Chile</option>
+        <option value="PE">🇵🇪 Perú</option>
+        <option value="US">🇺🇸 Estados Unidos</option>
+        <option value="GB">🇬🇧 Reino Unido</option>
+        <option value="FR">🇫🇷 Francia</option>
+        <option value="DE">🇩🇪 Alemania</option>
+        <option value="IT">🇮🇹 Italia</option>
+        <option value="BR">🇧🇷 Brasil</option>
+        <option value="PT">🇵🇹 Portugal</option>
+        <option value="OT">🌍 Otro</option>
+    </select>
+
     <button onclick="registrar()">REGISTRAR</button>
     <div class="enlace">
         ¿Ya tienes cuenta? <a href="login.html">Inicia sesión aquí</a>
@@ -63,6 +91,7 @@
         var nick = document.getElementById('nick').value.trim();
         var pass = document.getElementById('password').value;
         var pass2 = document.getElementById('password2').value;
+        var pais = document.getElementById('pais').value; // 🆕 Captura el país
         
         if (nick === "" || pass === "" || pass2 === "") {
             alert("Por favor, rellena todos los campos.");
@@ -79,7 +108,12 @@
             return;
         }
         
-        socket.emit('registro', { nick: nick, password: pass });
+        // 🆕 Envía el país al servidor
+        socket.emit('registro', { 
+            nick: nick, 
+            password: pass,
+            pais: pais 
+        });
     }
     
     socket.on('registro_response', function(data) {
@@ -111,4 +145,4 @@
 </script>
 
 </body>
-
+</html>
