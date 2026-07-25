@@ -76,20 +76,27 @@
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
     // Conexión explícita y con detección de errores para móviles/PWA
-    const socket = io('http://www.fighterchess.es', {  
-        transports: ['websocket', 'polling'],
-        timeout: 10000 
-    });
+    // Conexión automática (Socket.IO detecta si es HTTPS o HTTP)
+const socket = io({
+    transports: ['websocket', 'polling'],
+    timeout: 10000,
+    secure: true,  // Forzar conexión segura
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5
+});
 
-    socket.on('connect', () => {
-        console.log('✅ Conectado al servidor correctamente');
-    });
+socket.on('connect', () => {
+    console.log('✅ Conectado al servidor correctamente');
+});
 
-    socket.on('connect_error', (err) => {
-        console.error('❌ Error de conexión:', err);
+socket.on('connect_error', (err) => {
+    console.error(' Error de conexión:', err);
+    // No mostrar alerta inmediatamente, esperar a que reconecte
+    setTimeout(() => {
         alert('⚠️ No se pudo conectar al servidor. Revisa tu conexión a internet o intenta de nuevo en unos segundos.');
-    });
-
+    }, 3000);
+});
     let nickGlobal = '';
 
     function entrarAlJuego() {
