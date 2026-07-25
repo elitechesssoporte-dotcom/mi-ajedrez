@@ -34,7 +34,7 @@ sids_activos = {}
 desconexiones_por_jugador = {}
 
 def emitir_cola_espera():
-    print(f" Emitiendo cola - Total en espera: {len(cola_espera)}")
+    print(f"📡 Emitiendo cola - Total en espera: {len(cola_espera)}")
     cola_info = []
     for jugador in cola_espera:
         nick = jugador['data'].get('usuario', 'Anónimo')
@@ -42,18 +42,29 @@ def emitir_cola_espera():
         categoria = obtener_categoria(tiempo)
         elo = obtener_elo(nick, categoria)
         
+        # 🏁 NUEVO: Obtener el país del jugador desde la base de datos
+        pais = 'ES'  # Valor por defecto
+        try:
+            response = supabase.table('usuarios').select('pais').ilike('nick', nick).execute()
+            if response.data and len(response.data) > 0:
+                pais = response.data[0].get('pais', 'ES')
+                print(f"   🌍 País de {nick}: {pais}")
+        except Exception as e:
+            print(f"⚠️ Error al obtener país de {nick}: {e}")
+        
         info = {
             'id': jugador['id'],
             'nick': nick,
             'tiempo': jugador['data'].get('tiempo', 5),
             'incremento': jugador['data'].get('incremento', 0),
             'elo': elo,
-            'color': jugador['data'].get('color', 'random')  #  AÑADIDO
+            'color': jugador['data'].get('color', 'random'),
+            'pais': pais  # 🏁 AÑADIDO: Enviamos el país al cliente
         }
-        print(f"   - {info['nick']} (ELO: {elo}) - {info['tiempo']}+{info['incremento']}s - Color: {info['color']}")
+        print(f"   - {info['nick']} (ELO: {elo}) - {info['tiempo']}+{info['incremento']}s - Color: {info['color']} - País: {info['pais']}")
         cola_info.append(info)
     
-    print(f" Enviando evento 'actualizar_cola_espera' con {len(cola_info)} jugadores")
+    print(f"📤 Enviando evento 'actualizar_cola_espera' con {len(cola_info)} jugadores")
     emit('actualizar_cola_espera', cola_info, broadcast=True)
     
 # --- RUTAS ---
