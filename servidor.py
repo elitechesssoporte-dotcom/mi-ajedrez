@@ -435,17 +435,19 @@ def login(data):
         if es_invitado:
             print(f" Login de invitado: {nick}")
             
-            response = supabase.table('usuarios').select('id, nick').ilike('nick', nick).execute()
+            # 🆕 Añadido 'pais' a la consulta
+            response = supabase.table('usuarios').select('id, nick, pais').ilike('nick', nick).execute()
             
             if response.data and len(response.data) > 0:
                 user_id = response.data[0]['id']
                 nick_real = response.data[0]['nick']
+                pais = response.data[0].get('pais', 'OT') # 🆕
                 
                 usuarios_conectados[nick_real] = sid
                 sids_activos[sid] = True
                 
                 print(f"✅ Invitado reconectado: {nick_real} (ID: {user_id})")
-                emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'invitado': True})
+                emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'invitado': True, 'pais': pais})
                 return
             else:
                 password_hash = hash_password('invitado_temporal')
@@ -454,7 +456,8 @@ def login(data):
                     'password_hash': password_hash,
                     'elo_bullet': 1200,
                     'elo_blitz': 1200,
-                    'elo_rapid': 1200
+                    'elo_rapid': 1200,
+                    'pais': 'OT' # 🆕 País por defecto para invitados
                 }).execute()
                 user_id = response.data[0]['id']
                 
@@ -462,10 +465,11 @@ def login(data):
                 sids_activos[sid] = True
                 
                 print(f"✅ Nuevo invitado registrado: {nick} (ID: {user_id})")
-                emit('login_response', {'success': True, 'nick': nick, 'userId': user_id, 'invitado': True})
+                emit('login_response', {'success': True, 'nick': nick, 'userId': user_id, 'invitado': True, 'pais': 'OT'})
                 return
         
-        response = supabase.table('usuarios').select('id, nick, password_hash').ilike('nick', nick).execute()
+        # 🆕 Añadido 'pais' a la consulta
+        response = supabase.table('usuarios').select('id, nick, password_hash, pais').ilike('nick', nick).execute()
         
         if not response.data or len(response.data) == 0:
             emit('login_response', {'success': False, 'message': 'Usuario no encontrado'})
@@ -475,6 +479,7 @@ def login(data):
         user_id = user['id']
         nick_real = user['nick']
         stored_password = user['password_hash']
+        pais = user.get('pais', 'ES') # 🆕 Obtener el país guardado
         
         if verify_password(stored_password, password):
             if nick_real in temporizadores_reconexion:
@@ -497,7 +502,7 @@ def login(data):
                 sids_activos[sid] = True
                 
                 print(f"✅ Reconexión exitosa: {nick_real} -> {sid}")
-                emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'reconexion': True})
+                emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'reconexion': True, 'pais': pais})
                 return
             
             if nick_real in usuarios_conectados:
@@ -514,7 +519,7 @@ def login(data):
                     sids_activos[sid] = True
                     
                     print(f"✅ Login exitoso (reconexión automática): {nick_real} -> {sid}")
-                    emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
+                    emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'pais': pais})
                     return
                 else:
                     print(f"⚠️ {nick_real} ya está conectado en {old_sid}")
@@ -523,8 +528,8 @@ def login(data):
             
             usuarios_conectados[nick_real] = sid
             sids_activos[sid] = True
-            print(f"✅ Login exitoso: {nick_real} (ID: {user_id}) - Session: {sid}")
-            emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id})
+            print(f"✅ Login exitoso: {nick_real} (ID: {user_id}) - Session: {sid} - País: {pais}")
+            emit('login_response', {'success': True, 'nick': nick_real, 'userId': user_id, 'pais': pais})
         else:
             emit('login_response', {'success': False, 'message': 'Contraseña incorrecta'})
             
