@@ -76,7 +76,7 @@
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
     // Conexión explícita y con detección de errores para móviles/PWA
-    const socket = io('https://www.fighterchess.es', { 
+    const socket = io('http://www.fighterchess.es', {  
         transports: ['websocket', 'polling'],
         timeout: 10000 
     });
