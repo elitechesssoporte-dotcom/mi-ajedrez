@@ -4,7 +4,7 @@ on:
   schedule:
     # Se ejecuta cada 10 minutos
     - cron: '*/10 * * * *'
-  workflow_dispatch: # Permite ejecutarlo manualmente
+  workflow_dispatch:
 
 jobs:
   wake-up-render:
