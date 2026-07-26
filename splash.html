@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FighterChess</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050505;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .logo-container {
+            animation: fadeInScale 1s ease-out;
+            text-align: center;
+        }
+
+        .logo-container img {
+            width: 200px;
+            height: 200px;
+            filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.5));
+        }
+
+        .loading-text {
+            color: #d4af37;
+            font-size: 1.2em;
+            margin-top: 30px;
+            letter-spacing: 3px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes fadeInScale {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.5;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container" id="splash">
+        <img src="/icon-512.png" alt="FighterChess">
+        <div class="loading-text">
+            CARGANDO<span class="loading-dots"></span>
+        </div>
+    </div>
+
+    <script>
+        // Esperar 2.5 segundos y luego ir al login
+        setTimeout(() => {
+            const splash = document.getElementById('splash');
+            splash.classList.add('fade-out');
+            
+            setTimeout(() => {
+                window.location.href = '/login.html';
+            }, 500); // Esperar a que termine la animación de fade out
+        }, 2500); // 2.5 segundos de splash
+    </script>
+</body>
+</html>
