@@ -2,7 +2,7 @@
   "name": "FighterChess",
   "short_name": "FighterChess",
   "description": "Juego de ajedrez online",
-  "start_url": "/login.html",
+  "start_url": "/splash.html",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#050505",
