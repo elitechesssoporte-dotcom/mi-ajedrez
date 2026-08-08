@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "es.fighterchess.twa",
+        "sha256_cert_fingerprints": ["C5:6E:BE:D2:2D:98:AB:7B:32:65:04:1A:6E:5A:B9:D8:E4:AA:A3:C4:F0:A8:03:20:60:36:2F:01:8F:A4:C6:D8"]
+      }
+    }]
