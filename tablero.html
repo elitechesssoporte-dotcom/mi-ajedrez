@@ -1158,6 +1158,46 @@ socket.on('estado_partida', function(data) {
     setTimeout(detectarApertura, 200);
 });
 
+// 🆕 ESCUCHAR LA HORA EXACTA DEL SERVIDOR (Se emite cada 0.5s)
+socket.on('actualizacion_tiempo_servidor', function(data) {
+    // Actualizamos nuestras variables con la verdad absoluta del servidor
+    segundosBlanco = data.blancas;
+    segundosNegro = data.negras;
+    
+    // Pintamos en pantalla inmediatamente
+    actualizarRelojes();
+    
+    // Obtener los elementos del DOM
+    var relojYo = document.getElementById('relojYo');
+    var relojRival = document.getElementById('relojRival');
+    
+    // Determinar cuál es el reloj de las blancas y cuál el de las negras según tu color
+    var relojBlancas = (miColor === 'white') ? relojYo : relojRival;
+    var relojNegras = (miColor === 'black') ? relojYo : relojRival;
+    
+    // Aplicar color rojo si quedan menos de 10 segundos, sino blanco
+    if (relojBlancas) {
+        relojBlancas.style.color = (segundosBlanco < 10) ? '#ff4444' : 'white';
+    }
+    if (relojNegras) {
+        relojNegras.style.color = (segundosNegro < 10) ? '#ff4444' : 'white';
+    }
+});
+
+// 🆕 ESCUCHAR CUANDO EL SERVIDOR DICTA FIN POR TIEMPO
+socket.on('fin_partida_tiempo', function(data) {
+    console.log('⏰ El servidor ha dictado fin por tiempo. Ganador:', data.ganador);
+    if (!partidaFinalizada) {
+        partidaFinalizada = true;
+        if (intervaloReloj) {
+            clearInterval(intervaloReloj);
+            intervaloReloj = null;
+        }
+        // El servidor también emitirá 'partida_finalizada' con los ELOs, 
+        // pero esto asegura que la UI reaccione al instante.
+    }
+});
+
 socket.on('oferta_tablas', function() {
     console.log('Oferta de tablas recibida');
     
@@ -1369,10 +1409,12 @@ socket.on('sesion_cerrada', function(data) {
 });
     
     function formatearTiempo(segs) {
-        var m = Math.floor(segs / 60);
-        var s = segs % 60;
-        return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
-    }
+    // ✅ Redondear para evitar decimales por precisión flotante
+    var totalSegundos = Math.floor(segs);
+    var m = Math.floor(totalSegundos / 60);
+    var s = totalSegundos % 60;
+    return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+}
     
     function actualizarRelojes() {
         var relojYo = document.getElementById('relojYo');
@@ -1390,47 +1432,17 @@ socket.on('sesion_cerrada', function(data) {
     function iniciarReloj() {
     if (intervaloReloj) clearInterval(intervaloReloj);
     
-    var contadorSegundos = 0;
-    
+    // El servidor es el jefe del tiempo. Este intervalo solo actualiza la pantalla
+    // para que los números cambien de forma fluida.
     intervaloReloj = setInterval(function() {
-        if (game.game_over()) {
+        if (partidaFinalizada || game.game_over()) {
             clearInterval(intervaloReloj);
             return;
         }
-        
-        if (game.turn() === 'w') {
-            segundosBlanco--;
-            if (segundosBlanco <= 0) {
-                segundosBlanco = 0;
-                clearInterval(intervaloReloj);
-                socket.emit('fin_partida', { sala: salaId, motivo: 'tiempo', ganador: 'black' });
-                alert('⏰ ¡Tiempo! Ganan las negras');
-            }
-        } else {
-            segundosNegro--;
-            if (segundosNegro <= 0) {
-                segundosNegro = 0;
-                clearInterval(intervaloReloj);
-                socket.emit('fin_partida', { sala: salaId, motivo: 'tiempo', ganador: 'white' });
-                alert('⏰ ¡Tiempo! Ganan las blancas');
-            }
-        }
-        
-        actualizarRelojes();
-        
-        // ✅ ENVIAR TIEMPOS AL SERVIDOR CADA 5 SEGUNDOS
-        contadorSegundos++;
-        if (contadorSegundos >= 5) {
-            socket.emit('actualizar_tiempos', {
-                sala: salaId,
-                segundos_blanco: segundosBlanco,
-                segundos_negro: segundosNegro
-            });
-            contadorSegundos = 0;
-        }
-    }, 1000);
+        actualizarRelojes(); // Solo actualiza el texto visual (MM:SS)
+    }, 500); // Se actualiza cada medio segundo para máxima fluidez
     
-    console.log('⏱️ Reloj iniciado');
+    console.log('⏱️ Reloj visual iniciado (el tiempo lo controla el servidor)');
 }
     
     function actualizarTurno() {
@@ -1554,8 +1566,6 @@ if (move.flags === 'k' || move.flags === 'q') {
             promotion: move.promotion
         },
         fen: game.fen(),
-        segundos_blanco: segundosBlanco,
-        segundos_negro: segundosNegro
     });
     
     actualizarTurno();
@@ -1640,8 +1650,6 @@ if (move.flags === 'k' || move.flags === 'q') {
             promotion: move.promotion
         },
         fen: game.fen(),
-        segundos_blanco: segundosBlanco,
-        segundos_negro: segundosNegro
     });
     
     
@@ -1800,8 +1808,6 @@ function ejecutarPremove() {
             promotion: move.promotion
         },
         fen: game.fen(),
-        segundos_blanco: segundosBlanco,
-        segundos_negro: segundosNegro
     });
 	
 	board.position(game.fen());
@@ -1873,7 +1879,13 @@ function eliminarResaltePremove() {
     }
 }    
     
-    function ofrecerRevancha() {
+function ofrecerRevancha() {
+    // 🚫 BLOQUEO PARA TORNEOS
+    if (localStorage.getItem('esTorneo') === 'true') {
+        alert('⚠️ En los torneos no hay revanchas. Cada partida es única.');
+        return;
+    }
+    
     if (!partidaFinalizada) {
         alert('Debes esperar a que termine la partida para ofrecer revancha');
         return;
@@ -1912,14 +1924,38 @@ function eliminarResaltePremove() {
 }
 
 	function salirAlMenu() {
+    // Verificar si es una partida de torneo ACTUAL
+    const esTorneo = localStorage.getItem('esTorneo');
+    const torneoId = localStorage.getItem('torneoActual');
+    const salaId = localStorage.getItem('salaId');
+    
+    console.log('🔍 DEBUG - Es torneo:', esTorneo, '| Torneo ID:', torneoId, '| Sala ID:', salaId);
+    
+    // Limpiar datos de la partida actual SIEMPRE
     localStorage.removeItem('salaId');
     localStorage.removeItem('miColor');
     localStorage.removeItem('rivalNick');
     localStorage.removeItem('tiempoPartida');
     localStorage.removeItem('incrementoPartida');
     localStorage.removeItem('colorElegido');
+    localStorage.removeItem('miElo');
+    localStorage.removeItem('rivalElo');
     
-    window.location.href = 'configuracion.html';
+    // ✅ CORRECCIÓN: Solo ir a torneo si esTorneo es EXACTAMENTE 'true' Y hay torneoId
+    if (esTorneo === 'true' && torneoId && torneoId.trim() !== '') {
+        console.log('🏆 Volviendo a la sala del torneo:', torneoId);
+        // Limpiamos SOLO los datos de la partida, NO los del torneo
+        window.location.href = 'sala_torneo.html';
+    } else {
+        console.log('🏠 Volviendo a configuración (partida normal o torneo inválido)');
+        // Partida normal o torneo inválido - limpiar TODO
+        localStorage.removeItem('esTorneo');
+        localStorage.removeItem('torneoActual');
+        localStorage.removeItem('nombreTorneo');
+        localStorage.removeItem('tiempoTorneo');
+        localStorage.removeItem('duracionTorneo');
+        window.location.href = 'configuracion.html';
+    }
 }
 	
     function reiniciarPartida() {
@@ -1971,61 +2007,61 @@ function habilitarBotonesPartida() {
     console.log('Botones de Tablas y Abandonar reactivados');
 }
     
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM cargado');
-        
-        var config = {
-            draggable: true,
-            position: 'start',
-            orientation: miColor || 'white',
-            onDragStart: onDragStart,
-            onDrop: onDrop,
-            onSnapEnd: onSnapEnd,
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-        };
-        
-                board = Chessboard('board', config);
-        
-        console.log('Tablero inicializado');
-        console.log('Orientación:', miColor);
-        
-        actualizarRelojes(); // Solo muestra el tiempo inicial visualmente
-        // iniciarReloj();    // ❌ ELIMINADO: Esperaremos a la confirmación del servidor
-        actualizarTurno();
-        actualizarBotonesReproduccion();
-        
-        document.getElementById('btnSalir').disabled = true;
-		// 🔊 Debug de sonidos
-console.log('🔊 Sistema de sonidos inicializado');
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado');
+    
+    // ✅ AQUÍ YA NO HAY LLAVES DE MÁS, TODO EL CÓDIGO VA DENTRO
+    
+    var config = {
+        draggable: true,
+        position: 'start',
+        orientation: miColor || 'white',
+        onDragStart: onDragStart,
+        onDrop: onDrop,
+        onSnapEnd: onSnapEnd,
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+    };
+    
+    board = Chessboard('board', config);
+    
+    console.log('Tablero inicializado');
+    console.log('Orientación:', miColor);
+    
+    actualizarRelojes(); 
+    actualizarTurno();
+    actualizarBotonesReproduccion();
+    
+    document.getElementById('btnSalir').disabled = true;
+    console.log('🔊 Sistema de sonidos inicializado');
 
-document.addEventListener('touchmove', function(e) {
-    if (e.target.closest('#board')) {
-        e.preventDefault();
-    }
-}, { passive: false });
-
-function ajustarTableroMovil() {
-    if (window.innerWidth <= 768) {
-        var ancho = window.innerWidth - 10;
-        var board = document.getElementById('board');
-        if (board) {
-            board.style.width = ancho + 'px';
-            board.style.maxWidth = ancho + 'px';
+    document.addEventListener('touchmove', function(e) {
+        if (e.target.closest('#board')) {
+            e.preventDefault();
         }
-        
-        var playerInfo = document.querySelectorAll('.player-info');
-        playerInfo.forEach(function(el) {
-            el.style.width = ancho + 'px';
-            el.style.maxWidth = ancho + 'px';
-        });
+    }, { passive: false });
+
+    function ajustarTableroMovil() {
+        if (window.innerWidth <= 768) {
+            var ancho = window.innerWidth - 10;
+            var elementoBoard = document.getElementById('board'); // Cambié el nombre para evitar conflictos
+            if (elementoBoard) {
+                elementoBoard.style.width = ancho + 'px';
+                elementoBoard.style.maxWidth = ancho + 'px';
+            }
+            
+            var playerInfo = document.querySelectorAll('.player-info');
+            playerInfo.forEach(function(el) {
+                el.style.width = ancho + 'px';
+                el.style.maxWidth = ancho + 'px';
+            });
+        }
     }
-}
 
-window.addEventListener('resize', ajustarTableroMovil);
-window.addEventListener('load', ajustarTableroMovil);
-ajustarTableroMovil();
+    window.addEventListener('resize', ajustarTableroMovil);
+    window.addEventListener('load', ajustarTableroMovil);
+    ajustarTableroMovil();
 
-});
+}); // <--- ESTA ES LA ÚNICA LLAVE Y PARÉNTESIS QUE CIERRA TODO AL FINAL
 // === DICCIONARIO DE APERTURAS (solo las más importantes) ===
 const aperturasConocidas = {
     "e4 e5 Nf3 Nc6 Bb5": "Ruy López",
@@ -2081,8 +2117,15 @@ function detectarApertura() {
 }
 // === FUNCIÓN PARA CANCELAR PARTIDA ===
 function cancelarPartida() {
+    // 🚫 BLOQUEO DE SEGURIDAD PARA TORNEOS
+    if (localStorage.getItem('esTorneo') === 'true') {
+        alert('⚠️ No se puede cancelar una partida de torneo.');
+        return;
+    }
+
     const miColor = localStorage.getItem('miColor');
     const movimientosTotales = game.history().length;
+    // ... resto del código se mantiene igual
     
     let yaHeMovido = false;
     if (miColor === 'white' && movimientosTotales >= 1) yaHeMovido = true;
@@ -2115,67 +2158,53 @@ socket.on('error_cancelar', function(data) {
     alert('⚠️ ' + data.mensaje);
 });
 
-// === DESACTIVAR BOTÓN CUANDO EL JUGADOR HACE SU PRIMERA JUGADA ===
-function actualizarBotonCancelar() {
-    const btnCancelar = document.getElementById('btn-cancelar-partida');
-    if (!btnCancelar) return;
-    
-    const miColor = localStorage.getItem('miColor'); // 'white' o 'black'
-    const movimientosTotales = game.history().length;
-    
-    let yaHeMovido = false;
-    
-    // Si soy blancas, ya he movido si hay 1 o más movimientos en el historial
-    if (miColor === 'white' && movimientosTotales >= 1) {
-        yaHeMovido = true;
-    } 
-    // Si soy negras, ya he movido si hay 2 o más movimientos en el historial
-    else if (miColor === 'black' && movimientosTotales >= 2) {
-        yaHeMovido = true;
-    }
-    
-    if (yaHeMovido) {
-        // Se "apaga" visualmente pero mantiene el texto
-        btnCancelar.disabled = true;
-        btnCancelar.style.opacity = '0.3'; 
-        btnCancelar.style.cursor = 'not-allowed';
-    } else {
-        // Totalmente visible y clicable
-        btnCancelar.disabled = false;
-        btnCancelar.style.opacity = '1'; 
-        btnCancelar.style.cursor = 'pointer';
-    }
-}
 
 // === DESACTIVAR BOTÓN CUANDO EL JUGADOR HACE SU PRIMERA JUGADA ===
 function actualizarBotonCancelar() {
     const btnCancelar = document.getElementById('btn-cancelar-partida');
     if (!btnCancelar) return;
     
-    const miColor = localStorage.getItem('miColor'); // 'white' o 'black'
+    const esTorneo = localStorage.getItem('esTorneo') === 'true';
+    const miColor = localStorage.getItem('miColor'); 
     const movimientosTotales = game.history().length;
     
     let yaHeMovido = false;
+    if (miColor === 'white' && movimientosTotales >= 1) yaHeMovido = true;
+    else if (miColor === 'black' && movimientosTotales >= 2) yaHeMovido = true;
     
-    // Si soy blancas, ya he movido si hay 1 o más movimientos en el historial
-    if (miColor === 'white' && movimientosTotales >= 1) {
-        yaHeMovido = true;
-    } 
-    // Si soy negras, ya he movido si hay 2 o más movimientos en el historial
-    else if (miColor === 'black' && movimientosTotales >= 2) {
-        yaHeMovido = true;
-    }
-    
-    if (yaHeMovido) {
-        // Se "apaga" visualmente pero mantiene el texto
+    if (esTorneo || yaHeMovido) {
         btnCancelar.disabled = true;
-        btnCancelar.style.opacity = '0.3'; 
+        btnCancelar.style.opacity = '0.4'; 
         btnCancelar.style.cursor = 'not-allowed';
+        btnCancelar.style.background = '#555';
     } else {
-        // Totalmente visible y clicable
         btnCancelar.disabled = false;
         btnCancelar.style.opacity = '1'; 
         btnCancelar.style.cursor = 'pointer';
+        btnCancelar.style.background = '#ff9800';
+    }
+    
+    btnCancelar.innerText = '🚪 Cancelar partida';
+    
+    // 🆕 NUEVO: Controlar también el botón de Revancha en torneos
+    const btnRevancha = document.querySelector('.btn-revancha');
+    if (btnRevancha) {
+        if (esTorneo) {
+            btnRevancha.disabled = true;
+            btnRevancha.style.opacity = '0.4';
+            btnRevancha.style.cursor = 'not-allowed';
+        } else {
+            // En partidas normales, solo habilitar si la partida terminó
+            if (partidaFinalizada) {
+                btnRevancha.disabled = false;
+                btnRevancha.style.opacity = '1';
+                btnRevancha.style.cursor = 'pointer';
+            } else {
+                btnRevancha.disabled = true;
+                btnRevancha.style.opacity = '0.4';
+                btnRevancha.style.cursor = 'not-allowed';
+            }
+        }
     }
 }
 
