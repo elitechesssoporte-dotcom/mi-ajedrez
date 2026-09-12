@@ -34,10 +34,10 @@
             </div>
             
             <div class="nav-container">
-                <button onclick="irAlInicio()">⏮️ Inicio</button>
+                <button onclick="irAlInicio()">️ Inicio</button>
                 <button onclick="jugadaAnterior()">◀️ Atrás</button>
                 <button onclick="jugadaSiguiente()">▶️ Siguiente</button>
-                <button onclick="irAlFinal()">⏭️ Final</button>
+                <button onclick="irAlFinal()">️ Final</button>
                 <p id="contadorJugadas">Jugada 0 de 0</p>
             </div>
         </div>
@@ -53,12 +53,12 @@
             
             <div>
                 <button onclick="cargarFEN()">📋 Cargar FEN</button>
-                <button onclick="cargarPGN()"> Cargar PGN</button>
+                <button onclick="cargarPGN()">📄 Cargar PGN</button>
             </div>
             
             <div style="margin-top: 15px;">
                 <button onclick="iniciarAnalisis()">▶️ Analizar</button>
-                <button onclick="detenerAnalisis()">️ Detener</button>
+                <button onclick="detenerAnalisis()">⏹️ Detener</button>
             </div>
             
             <p id="resultadoEval">Evaluación: Esperando...</p>
@@ -92,7 +92,6 @@
             var move = game.move({ from: source, to: target, promotion: 'q' });
             if (move === null) return 'snapback';
             
-            // Actualizar historial cuando mueves manualmente
             historialCompleto = game.history({ verbose: true });
             indiceActual = historialCompleto.length;
             actualizarContador();
@@ -118,7 +117,7 @@
         
         board = Chessboard('miTablero', config);
 
-                function cargarStockfish() {
+        function cargarStockfish() {
             try {
                 stockfish = new Worker('stockfish.js');
                 
@@ -127,7 +126,7 @@
                     
                     if (line === 'uciok') {
                         stockfish.postMessage('setoption name Hash value 512');
-                        stockfish.postMessage('setoption name MultiPV value 1'); // ✅ Fuerza mostrar solo la mejor línea
+                        stockfish.postMessage('setoption name MultiPV value 1');
                         stockfish.postMessage('isready');
                         return;
                     }
@@ -146,7 +145,6 @@
                         if (match) {
                             var score = parseInt(match[1]);
                             
-                            // ✅ Convertir a ventaja absoluta (Positivo = Ventaja Blancas, Negativo = Ventaja Negras)
                             if (game.turn() === 'b') {
                                 score = -score;
                             }
@@ -155,14 +153,12 @@
                             evalPct = Math.max(5, Math.min(95, evalPct));
                             document.getElementById('barraBlanca').style.height = evalPct + '%';
                             
-                            // ✅ Añadir signo + o - para que sea SIEMPRE claro
                             var signo = score >= 0 ? '+' : '';
                             var evalTexto = signo + (score / 100).toFixed(2);
                             document.getElementById('resultadoEval').innerText = 'Evaluación: ' + evalTexto;
                         }
                     }
                     
-                    // ✅ Capturar la mejor jugada de forma infalible
                     if (line.startsWith('info') && line.includes('multipv 1') && line.includes(' pv ')) {
                         var pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
                         if (pvMatch) {
@@ -178,16 +174,16 @@
                 document.getElementById('resultadoEval').innerText = '❌ Error: stockfish.js no encontrado';
             }
         }
+
         function actualizarFEN() {
             document.getElementById('fenInput').value = game.fen();
         }
 
         function actualizarContador() {
             var total = historialCompleto.length;
-            document.getElementById('contadorJugadas').innerText = `Jugada ${indiceActual} de ${total}`;
+            document.getElementById('contadorJugadas').innerText = 'Jugada ' + indiceActual + ' de ' + total;
         }
 
-        // --- NAVEGACIÓN CORREGIDA ---
         function irAlInicio() {
             game.reset();
             board.position('start');
@@ -199,7 +195,6 @@
 
         function jugadaAnterior() {
             if (indiceActual > 0 && historialCompleto.length > 0) {
-                // Reconstruir la posición desde el inicio hasta indiceActual-1
                 game.reset();
                 for (var i = 0; i < indiceActual - 1; i++) {
                     game.move(historialCompleto[i]);
@@ -235,11 +230,10 @@
             if (analizando) setTimeout(iniciarAnalisis, 100);
         }
 
-        // --- CARGA ---
         function cargarFEN() {
             var fen = document.getElementById('fenInput').value.trim();
             if (!fen) {
-                alert(' El campo FEN está vacío');
+                alert('❌ El campo FEN está vacío');
                 return;
             }
             try {
@@ -251,45 +245,37 @@
                 actualizarContador();
                 if (analizando) setTimeout(iniciarAnalisis, 100);
             } catch (e) {
-                alert('❌ FEN no válido');
+                alert(' FEN no válido');
             }
         }
 
         function cargarPGN() {
-    var pgn = document.getElementById('pgnInput').value.trim();
-    if (!pgn) {
-        alert('⚠️ El campo PGN está vacío');
-        return;
-    }
-    try {
-        // Crear un juego temporal para extraer los movimientos
-        var tempGame = new Chess();
-        var loaded = tempGame.load_pgn(pgn);
-        
-        if (loaded) {
-            // Guardar el historial completo
-            historialCompleto = tempGame.history({ verbose: true });
-            
-            // Reiniciar el juego principal en la posición inicial
-            game.reset();
-            board.position('start');
-            indiceActual = 0;
-            
-            actualizarFEN();
-            actualizarContador();
-            
-            console.log('✅ PGN cargado. Total jugadas:', historialCompleto.length);
-            console.log('Historial:', historialCompleto);
-        } else {
-            alert('❌ No se pudo cargar el PGN. Revisa el formato.');
+            var pgn = document.getElementById('pgnInput').value.trim();
+            if (!pgn) {
+                alert('❌ El campo PGN está vacío');
+                return;
+            }
+            try {
+                var tempGame = new Chess();
+                var loaded = tempGame.load_pgn(pgn);
+                
+                if (loaded) {
+                    historialCompleto = tempGame.history({ verbose: true });
+                    game.reset();
+                    board.position('start');
+                    indiceActual = 0;
+                    actualizarFEN();
+                    actualizarContador();
+                    console.log('✅ PGN cargado. Total jugadas:', historialCompleto.length);
+                } else {
+                    alert('❌ No se pudo cargar el PGN. Revisa el formato.');
+                }
+            } catch (e) {
+                alert('❌ Error al cargar PGN: ' + e.message);
+            }
         }
-    } catch (e) {
-        alert('❌ Error al cargar PGN: ' + e.message);
-    }
-}
 
-        // --- ANÁLISIS ---
-                function iniciarAnalisis() {
+        function iniciarAnalisis() {
             if (!stockfish) {
                 cargarStockfish();
                 setTimeout(iniciarAnalisis, 1000);
@@ -297,29 +283,18 @@
             }
             
             if (!stockfishListo) {
-                document.getElementById('resultadoEval').innerText = "⏳ Cargando motor...";
+                document.getElementById('resultadoEval').innerText = " Cargando motor...";
                 setTimeout(iniciarAnalisis, 500);
                 return;
             }
             
-            // Detener cualquier análisis anterior
             stockfish.postMessage('stop');
             analizando = true;
             document.getElementById('mejorJugada').innerText = "Calculando...";
             
-            // ✅ CAMBIO CLAVE: Usar 'depth 12' en lugar de tiempo.
-            // Es instantáneo (1-2 segundos) y muy preciso para ver errores al momento.
             stockfish.postMessage('position fen ' + game.fen());
             stockfish.postMessage('go depth 12');
         }
-    
-    setTimeout(() => {
-        if (analizando) {
-            stockfish.postMessage('position fen ' + game.fen());
-            stockfish.postMessage('go infinite');
-        }
-    }, 10000);
-}
 
         function detenerAnalisis() {
             analizando = false;
