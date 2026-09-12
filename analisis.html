@@ -25,6 +25,7 @@
         #contadorJugadas { margin-top: 10px; color: #d4af37; font-size: 0.95em; }
         .mate-aviso { color: #ff4444; font-weight: bold; font-size: 1.2em; animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .profundidad { color: #888; font-size: 0.9em; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -36,10 +37,10 @@
             </div>
             
             <div class="nav-container">
-                <button onclick="irAlInicio()">️ Inicio</button>
+                <button onclick="irAlInicio()">⏮️ Inicio</button>
                 <button onclick="jugadaAnterior()">◀️ Atrás</button>
                 <button onclick="jugadaSiguiente()">▶️ Siguiente</button>
-                <button onclick="irAlFinal()">⏭️ Final</button>
+                <button onclick="irAlFinal()">️ Final</button>
                 <p id="contadorJugadas">Jugada 0 de 0</p>
             </div>
         </div>
@@ -55,16 +56,17 @@
             
             <div>
                 <button onclick="cargarFEN()">📋 Cargar FEN</button>
-                <button onclick="cargarPGN()"> Cargar PGN</button>
+                <button onclick="cargarPGN()">📄 Cargar PGN</button>
             </div>
             
             <div style="margin-top: 15px;">
                 <button onclick="iniciarAnalisis()">▶️ Analizar</button>
-                <button onclick="detenerAnalisis()">️ Detener</button>
+                <button onclick="detenerAnalisis()">⏹️ Detener</button>
             </div>
             
             <p id="resultadoEval">Evaluación: Esperando...</p>
             <p id="mejorJugada"></p>
+            <p class="profundidad" id="profundidadInfo"></p>
             
             <button class="btn-volver" onclick="window.location.href='configuracion.html'">⬅️ Volver</button>
         </div>
@@ -80,7 +82,7 @@
         var stockfish = null;
         var analizando = false;
         var stockfishListo = false;
-        var timeoutAnalisis = null;
+        var mateDetectado = false;
         
         var historialCompleto = [];
         var indiceActual = 0;
@@ -100,16 +102,20 @@
             actualizarContador();
             actualizarFEN();
             
-            // Verificar si hay mate o tablas inmediatamente
+            // ✅ DETECTAR MATE O TABLAS INMEDIATAMENTE
             if (game.in_checkmate()) {
                 detenerAnalisis();
-                document.getElementById('resultadoEval').innerHTML = '<span class="mate-aviso">♚ ¡JAQUE MATE!</span>';
+                var ganador = game.turn() === 'w' ? 'Negras' : 'Blancas';
+                document.getElementById('resultadoEval').innerHTML = '<span class="mate-aviso">♚ ¡JAQUE MATE! Ganan ' + ganador + '</span>';
                 document.getElementById('mejorJugada').innerText = '';
+                document.getElementById('profundidadInfo').innerText = '';
             } else if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
                 detenerAnalisis();
                 document.getElementById('resultadoEval').innerText = '🤝 Tablas';
                 document.getElementById('mejorJugada').innerText = '';
+                document.getElementById('profundidadInfo').innerText = '';
             } else if (analizando) {
+                // Reiniciar análisis en la nueva posición
                 setTimeout(iniciarAnalisis, 200);
             }
         }
@@ -152,43 +158,51 @@
                     
                     if (!analizando) return;
                     
-                    // Verificar mate detectado por Stockfish
+                    // ✅ DETECTAR MATE FORZADO (Stockfish lo ve antes que el tablero)
                     if (line.includes('mate')) {
                         var mateMatch = line.match(/mate (-?\d+)/);
                         if (mateMatch) {
                             var movimientosMate = parseInt(mateMatch[1]);
                             detenerAnalisis();
+                            mateDetectado = true;
+                            
                             if (movimientosMate > 0) {
                                 document.getElementById('resultadoEval').innerHTML = 
-                                    '<span class="mate-aviso"> Mate en ' + movimientosMate + '</span>';
+                                    '<span class="mate-aviso"> Mate en ' + movimientosMate + ' (Blancas)</span>';
                             } else {
                                 document.getElementById('resultadoEval').innerHTML = 
-                                    '<span class="mate-aviso">♚ Mate en ' + Math.abs(movimientosMate) + '</span>';
+                                    '<span class="mate-aviso">♚ Mate en ' + Math.abs(movimientosMate) + ' (Negras)</span>';
                             }
                             document.getElementById('mejorJugada').innerText = '';
+                            document.getElementById('profundidadInfo').innerText = 'Mate detectado por Stockfish';
                             return;
                         }
                     }
                     
+                    // ✅ EVALUACIÓN NORMAL (centipawns)
                     if (line.startsWith('info') && line.includes('score cp')) {
                         var match = line.match(/score cp (-?\d+)/);
                         if (match) {
                             var score = parseInt(match[1]);
                             
+                            // Invertir si es turno de negras (para que + siempre sea ventaja blancas)
                             if (game.turn() === 'b') {
                                 score = -score;
                             }
                             
+                            // Actualizar barra de evaluación
                             var evalPct = 50 + (score / 10);
                             evalPct = Math.max(5, Math.min(95, evalPct));
                             document.getElementById('barraBlanca').style.height = evalPct + '%';
                             
+                            // Mostrar evaluación con signo
                             var signo = score >= 0 ? '+' : '';
                             var evalTexto = signo + (score / 100).toFixed(2);
                             document.getElementById('resultadoEval').innerText = 'Evaluación: ' + evalTexto;
                         }
                     }
                     
+                    // ✅ MEJOR JUGADA (solo la línea principal, multipv 1)
                     if (line.startsWith('info') && line.includes('multipv 1') && line.includes(' pv ')) {
                         var pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
                         if (pvMatch) {
@@ -196,16 +210,13 @@
                         }
                     }
                     
-                    // Timeout de seguridad: si lleva 5 segundos, parar
-                    if (timeoutAnalisis) {
-                        clearTimeout(timeoutAnalisis);
-                    }
-                    timeoutAnalisis = setTimeout(function() {
-                        if (analizando) {
-                            detenerAnalisis();
-                            document.getElementById('resultadoEval').innerText += ' (tiempo máx. alcanzado)';
+                    // ✅ MOSTRAR PROFUNDIDAD ACTUAL
+                    if (line.startsWith('info') && line.includes('depth')) {
+                        var depthMatch = line.match(/depth (\d+)/);
+                        if (depthMatch) {
+                            document.getElementById('profundidadInfo').innerText = 'Profundidad: ' + depthMatch[1];
                         }
-                    }, 5000);
+                    }
                 };
                 
                 stockfish.postMessage('uci');
@@ -232,8 +243,10 @@
             actualizarFEN();
             actualizarContador();
             detenerAnalisis();
+            mateDetectado = false;
             document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
             document.getElementById('mejorJugada').innerText = '';
+            document.getElementById('profundidadInfo').innerText = '';
         }
 
         function jugadaAnterior() {
@@ -247,8 +260,10 @@
                 actualizarFEN();
                 actualizarContador();
                 detenerAnalisis();
+                mateDetectado = false;
                 document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
                 document.getElementById('mejorJugada').innerText = '';
+                document.getElementById('profundidadInfo').innerText = '';
             }
         }
 
@@ -260,8 +275,10 @@
                 actualizarFEN();
                 actualizarContador();
                 detenerAnalisis();
+                mateDetectado = false;
                 document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
                 document.getElementById('mejorJugada').innerText = '';
+                document.getElementById('profundidadInfo').innerText = '';
             }
         }
 
@@ -275,8 +292,10 @@
             actualizarFEN();
             actualizarContador();
             detenerAnalisis();
+            mateDetectado = false;
             document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
             document.getElementById('mejorJugada').innerText = '';
+            document.getElementById('profundidadInfo').innerText = '';
         }
 
         function cargarFEN() {
@@ -293,8 +312,10 @@
                 indiceActual = 0;
                 actualizarContador();
                 detenerAnalisis();
+                mateDetectado = false;
                 document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
                 document.getElementById('mejorJugada').innerText = '';
+                document.getElementById('profundidadInfo').innerText = '';
             } catch (e) {
                 alert('❌ FEN no válido');
             }
@@ -318,8 +339,10 @@
                     actualizarFEN();
                     actualizarContador();
                     detenerAnalisis();
+                    mateDetectado = false;
                     document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
                     document.getElementById('mejorJugada').innerText = '';
+                    document.getElementById('profundidadInfo').innerText = '';
                 } else {
                     alert('❌ No se pudo cargar el PGN. Revisa el formato.');
                 }
@@ -329,17 +352,24 @@
         }
 
         function iniciarAnalisis() {
-            // ✅ VERIFICAR SI LA PARTIDA YA TERMINÓ
+            // ✅ VERIFICAR SI YA HAY MATE O TABLAS
             if (game.in_checkmate()) {
-                document.getElementById('resultadoEval').innerHTML = '<span class="mate-aviso">♚ ¡JAQUE MATE!</span>';
+                var ganador = game.turn() === 'w' ? 'Negras' : 'Blancas';
+                document.getElementById('resultadoEval').innerHTML = '<span class="mate-aviso">♚ ¡JAQUE MATE! Ganan ' + ganador + '</span>';
                 document.getElementById('mejorJugada').innerText = '';
+                document.getElementById('profundidadInfo').innerText = '';
                 return;
             }
             
             if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
                 document.getElementById('resultadoEval').innerText = '🤝 Tablas';
                 document.getElementById('mejorJugada').innerText = '';
+                document.getElementById('profundidadInfo').innerText = '';
                 return;
+            }
+            
+            if (mateDetectado) {
+                return; // Ya detectamos mate, no seguir analizando
             }
             
             if (!stockfish) {
@@ -349,26 +379,25 @@
             }
             
             if (!stockfishListo) {
-                document.getElementById('resultadoEval').innerText = " Cargando motor...";
+                document.getElementById('resultadoEval').innerText = "⏳ Cargando motor...";
                 setTimeout(iniciarAnalisis, 500);
                 return;
             }
             
+            // Detener análisis anterior y empezar nuevo
             stockfish.postMessage('stop');
             analizando = true;
             document.getElementById('mejorJugada').innerText = "Calculando...";
-            document.getElementById('resultadoEval').innerText = "⏳ Analizando...";
+            document.getElementById('resultadoEval').innerText = " Analizando...";
+            document.getElementById('profundidadInfo').innerText = '';
             
+            // ✅ SIN TIMEOUT: Calcular hasta que Stockfish encuentre mate o el usuario pare
             stockfish.postMessage('position fen ' + game.fen());
-            stockfish.postMessage('go depth 15');
+            stockfish.postMessage('go infinite');
         }
 
         function detenerAnalisis() {
             analizando = false;
-            if (timeoutAnalisis) {
-                clearTimeout(timeoutAnalisis);
-                timeoutAnalisis = null;
-            }
             if (stockfish) {
                 stockfish.postMessage('stop');
             }
