@@ -179,16 +179,14 @@
                         }
                     }
                     
-                    // ✅ EVALUACIÓN NORMAL (centipawns)
+                                        // ✅ EVALUACIÓN NORMAL (centipawns)
                     if (line.startsWith('info') && line.includes('score cp')) {
                         var match = line.match(/score cp (-?\d+)/);
                         if (match) {
                             var score = parseInt(match[1]);
                             
-                            // Invertir si es turno de negras (para que + siempre sea ventaja blancas)
-                            if (game.turn() === 'b') {
-                                score = -score;
-                            }
+                            // ⚠️ NO INVERTIR: Stockfish siempre da desde perspectiva de blancas
+                            // + = ventaja blancas, - = ventaja negras (siempre)
                             
                             // Actualizar barra de evaluación
                             var evalPct = 50 + (score / 10);
