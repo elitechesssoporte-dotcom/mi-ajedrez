@@ -118,63 +118,66 @@
         
         board = Chessboard('miTablero', config);
 
-        function cargarStockfish() {
-    try {
-        stockfish = new Worker('stockfish.js');
-        
-        stockfish.onmessage = function(event) {
-            var line = event.data;
-            
-            if (line === 'uciok') {
-    stockfish.postMessage('setoption name Hash value 512');
-    stockfish.postMessage('isready');
-    return;
-}
-            
-            if (line === 'readyok') {
-                stockfishListo = true;
-                console.log('✅ Stockfish listo');
-                document.getElementById('resultadoEval').innerText = 'Motor listo. Dale a Analizar.';
-                return;
+                function cargarStockfish() {
+            try {
+                stockfish = new Worker('stockfish.js');
+                
+                stockfish.onmessage = function(event) {
+                    var line = event.data;
+                    
+                    if (line === 'uciok') {
+                        stockfish.postMessage('setoption name Hash value 512');
+                        stockfish.postMessage('setoption name MultiPV value 1'); // ✅ Fuerza mostrar solo la mejor línea
+                        stockfish.postMessage('isready');
+                        return;
+                    }
+                    
+                    if (line === 'readyok') {
+                        stockfishListo = true;
+                        console.log('✅ Stockfish listo');
+                        document.getElementById('resultadoEval').innerText = 'Motor listo. Dale a Analizar.';
+                        return;
+                    }
+                    
+                    if (!analizando) return;
+                    
+                    if (line.startsWith('info') && line.includes('score cp')) {
+                        var match = line.match(/score cp (-?\d+)/);
+                        if (match) {
+                            var score = parseInt(match[1]);
+                            
+                            // ✅ Convertir a ventaja absoluta (Positivo = Ventaja Blancas, Negativo = Ventaja Negras)
+                            if (game.turn() === 'b') {
+                                score = -score;
+                            }
+                            
+                            var evalPct = 50 + (score / 10);
+                            evalPct = Math.max(5, Math.min(95, evalPct));
+                            document.getElementById('barraBlanca').style.height = evalPct + '%';
+                            
+                            // ✅ Añadir signo + o - para que sea SIEMPRE claro
+                            var signo = score >= 0 ? '+' : '';
+                            var evalTexto = signo + (score / 100).toFixed(2);
+                            document.getElementById('resultadoEval').innerText = 'Evaluación: ' + evalTexto;
+                        }
+                    }
+                    
+                    // ✅ Capturar la mejor jugada de forma infalible
+                    if (line.startsWith('info') && line.includes('multipv 1') && line.includes(' pv ')) {
+                        var pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
+                        if (pvMatch) {
+                            document.getElementById('mejorJugada').innerText = 'Mejor jugada: ' + pvMatch[1];
+                        }
+                    }
+                };
+                
+                stockfish.postMessage('uci');
+                console.log('🔄 Cargando Stockfish...');
+            } catch (e) {
+                console.error('❌ Error al cargar Stockfish:', e);
+                document.getElementById('resultadoEval').innerText = '❌ Error: stockfish.js no encontrado';
             }
-            
-            if (!analizando) return;
-            
-            if (line.startsWith('info') && line.includes('score cp')) {
-    const scoreMatch = line.match(/score cp (-?\d+)/);
-    if (scoreMatch) {
-        let score = parseInt(scoreMatch[1]);
-        
-        // ✅ Obtener el FEN actual y ver de quién es el turno
-        const fen = document.getElementById('fenInput').value;
-        if (fen && fen.includes(' b ')) {
-            // Si es turno de negras, invertir la evaluación
-            score = -score;
         }
-        
-        const evalPct = (score / 100).toFixed(2);
-        const signo = score >= 0 ? '+' : '';
-        document.getElementById('eval').innerText = signo + evalPct;
-    }
-}
-            
-            // Solo la mejor jugada (multipv 1)
-            if (line.startsWith('info') && line.includes('multipv 1') && line.includes('pv')) {
-                var pvMatch = line.match(/pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
-                if (pvMatch) {
-                    document.getElementById('mejorJugada').innerText = 'Mejor jugada: ' + pvMatch[1];
-                }
-            }
-        };
-        
-        stockfish.postMessage('uci');
-        console.log('🔄 Cargando Stockfish...');
-    } catch (e) {
-        console.error('❌ Error al cargar Stockfish:', e);
-        document.getElementById('resultadoEval').innerText = '❌ Error: stockfish.js no encontrado';
-    }
-}
-
         function actualizarFEN() {
             document.getElementById('fenInput').value = game.fen();
         }
