@@ -22,45 +22,38 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-
         .jugador-cola:hover {
             border-color: #c4a028;
             background: #222;
             transform: translateX(5px);
         }
-
         .jugador-info {
             display: flex;
             flex-direction: column;
             text-align: left;
             flex: 1;
         }
-
         .jugador-nick {
             font-weight: bold;
             color: #fff;
             font-size: 1.05em;
         }
-
         .jugador-elo {
             font-size: 0.85em;
             color: #c4a028;
             font-weight: bold;
             margin-top: 2px;
         }
-
         .jugador-ritmo {
             font-size: 0.8em;
             color: #888;
             margin-top: 1px;
         }
-
         .jugador-pais {
             font-size: 0.85em;
             color: #c4a028;
             margin-top: 2px;
         }
-
         .btn-unirse {
             background: #c4a028;
             color: #000;
@@ -71,33 +64,27 @@
             cursor: pointer;
             margin-left: 10px;
         }
-
         .btn-unirse:hover {
             background: #d4af37;
         }
-
         body { 
             background: #050505; 
             color: #c0c0c0; 
             font-family: sans-serif; 
             display: flex; 
             justify-content: center; 
-            align-items: center; 
+            align-items: flex-start; 
             min-height: 100vh; 
             margin: 0; 
             padding: 20px;
         }
-
         .contenedor-principal {
             display: flex;
             gap: 20px;
             max-width: 1000px;
             width: 100%;
             align-items: flex-start;
-            margin-left: auto;
-            margin-right: 0;
         }
-
         .panel-izquierdo {
             width: 320px;
             background: #111; 
@@ -106,7 +93,6 @@
             border: 1px solid #333;
             flex-shrink: 0;
         }
-
         .panel-derecho {
             width: 300px;
             background: #111; 
@@ -117,7 +103,6 @@
             top: 20px;
             flex-shrink: 0;
         }
-
         .contador-box {
             background: #1a1a1a;
             border: 1px solid #333;
@@ -128,27 +113,23 @@
             font-size: 0.95rem;
             color: #c0c0c0;
         }
-
         .contador-box span {
             font-weight: bold;
             color: #4CAF50;
             font-size: 1.2em;
         }
-
         h2 { 
             color: #d4af37; 
             margin-bottom: 20px; 
             text-align: center;
             font-size: 1.3em;
         }
-
         .grid-tiempos { 
             display: grid; 
             grid-template-columns: repeat(3, 1fr); 
             gap: 8px; 
             margin-bottom: 15px; 
         }
-
         .btn-tiempo { 
             padding: 10px; 
             background: #222; 
@@ -158,20 +139,17 @@
             border-radius: 5px; 
             font-size: 0.95em;
         }
-
         .btn-tiempo:hover, .btn-tiempo.active { 
             background: #c4a028; 
             color: black; 
             font-weight: bold; 
         }
-
         label { 
             display: block; 
             margin-top: 12px; 
             font-size: 0.85rem; 
             text-align: left; 
         }
-
         input { 
             width: 100%; 
             padding: 8px; 
@@ -183,7 +161,6 @@
             box-sizing: border-box; 
             font-size: 0.9em;
         }
-
         #btn-jugar { 
             width: 100%; 
             padding: 12px; 
@@ -195,12 +172,10 @@
             margin-top: 20px; 
             font-size: 1em;
         }
-
         #btn-jugar:disabled { 
             background: #555; 
             cursor: not-allowed; 
         }
-
         #mensaje-espera { 
             color: #c4a028; 
             margin-top: 12px; 
@@ -208,17 +183,14 @@
             display: none; 
             text-align: center;
         }
-
         .tiempo-personalizado {
             display: flex;
             gap: 8px;
             margin-top: 8px;
         }
-
         .tiempo-personalizado input {
             flex: 1;
         }
-
         .tiempo-personalizado .unidad {
             background: #222;
             border: 1px solid #444;
@@ -228,13 +200,12 @@
             cursor: pointer;
             font-weight: bold;
             font-size: 0.9em;
+            margin-top: 5px;
         }
-
         .tiempo-personalizado .unidad.active {
             background: #c4a028;
             color: black;
         }
-
         .titulo-cola {
             color: #c4a028;
             font-size: 1.1rem;
@@ -243,42 +214,51 @@
             border-bottom: 2px solid #333;
             padding-bottom: 10px;
         }
-
         .lista-jugadores-container {
             max-height: 500px;
             overflow-y: auto;
         }
 
+        /* Botones de navegación extra */
+        .btn-nav {
+            width: 100%;
+            padding: 12px;
+            background: #d4af37;
+            color: black;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        .btn-nav:hover {
+            background: #f0d060;
+            transform: translateY(-2px);
+        }
+        .btn-nav.blue {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-nav.blue:hover {
+            background: #42a5f5;
+        }
+
         @media (max-width: 900px) {
             .contenedor-principal {
                 flex-direction: column;
-                margin-left: 0;
             }
-            
             .panel-izquierdo, .panel-derecho {
                 width: 100%;
                 position: static;
             }
         }
-
         @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            
-            .panel-izquierdo, .panel-derecho {
-                padding: 15px;
-            }
-            
-            .grid-tiempos {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 6px;
-            }
-            
-            .btn-tiempo {
-                padding: 12px 8px;
-                font-size: 1em;
-            }
+            body { padding: 10px; }
+            .panel-izquierdo, .panel-derecho { padding: 15px; }
+            .grid-tiempos { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+            .btn-tiempo { padding: 12px 8px; font-size: 1em; }
         }
     </style>
 </head>
@@ -310,7 +290,7 @@
 
         <label>Elige tu color:</label>
         <div class="grid-tiempos" id="selector-color" style="display:none;">
-            <button class="btn-tiempo" onclick="seleccionarColor('white')"> Blancas</button>
+            <button class="btn-tiempo" onclick="seleccionarColor('white')">♔ Blancas</button>
             <button class="btn-tiempo active" onclick="seleccionarColor('random')">🎲 Aleatorio</button>
             <button class="btn-tiempo" onclick="seleccionarColor('black')">♚ Negras</button>
         </div>
@@ -321,9 +301,18 @@
             ❌ Cancelar búsqueda
         </button>
         
-        <button class="btn-tiempo" onclick="window.location.href='/clasificacion'" style="width:100%; margin-top:20px; margin-bottom:10px;">
-            🏆 Clasificación
-        </button>
+        <!-- Botones de navegación -->
+<button class="btn-nav" onclick="window.location.href='/clasificacion'" style="width:100%; margin-top:20px; margin-bottom:10px;">
+    🏆 Clasificación
+</button>
+
+<button class="btn-nav" onclick="window.location.href='torneos.html'">
+    🏆 Sala de Torneos
+</button>
+
+<button class="btn-nav blue" onclick="window.location.href='analisis.html'">
+    🔍 Análisis con Stockfish
+</button>
     </div>
     
     <!-- Panel Derecho - Contador + Lista de Jugadores -->
@@ -332,12 +321,13 @@
             🟢 Jugadores en línea: <span id="numero-conectados">0</span>
         </div>
         
-        <h3 class="titulo-cola"> Jugadores Buscando Partida</h3>
+        <h3 class="titulo-cola">👥 Jugadores Buscando Partida</h3>
         <div class="lista-jugadores-container" id="lista-jugadores">
             <p style="color: #666; text-align: center; padding: 20px;">No hay jugadores en espera.</p>
         </div>
     </div>
 </div>
+
 <!-- Registrar la App en el navegador -->
 <script>
   if ('serviceWorker' in navigator) {
@@ -348,7 +338,6 @@
     });
   }
 </script>
-</body>
 
 <script>
     const socket = io();
@@ -357,26 +346,13 @@
     let tiempoPersonalizadoActivo = false;
     let buscandoPartida = false;
     
-    //  DICCIONARIO DE BANDERAS
     // 🏁 DICCIONARIO DE BANDERAS (CORREGIDO)
-const banderas = {
-    'ES': '🇪🇸',  // ← AQUÍ ESTABA EL ERROR: tenía '🇸'
-    'MX': '🇽',
-    'AR': '🇦🇷',
-    'CO': '🇨🇴',
-    'CL': '🇨🇱',
-    'PE': '🇵🇪',
-    'US': '🇺🇸',
-    'GB': '🇬🇧',
-    'FR': '🇫',
-    'DE': '🇩',
-    'IT': '🇮🇹',
-    'BR': '🇷',
-    'PT': '🇹',
-    'OT': '🌍'
-};
-	
-    // Re-registrar sesión al conectar
+    const banderas = {
+        'ES': '🇪🇸', 'MX': '🇲🇽', 'AR': '🇦🇷', 'CO': '🇨🇴', 'CL': '🇨🇱', 
+        'PE': '🇵🇪', 'US': '🇺🇸', 'GB': '🇬🇧', 'FR': '🇫🇷', 'DE': '🇩🇪', 
+        'IT': '🇮🇹', 'BR': '🇧🇷', 'PT': '🇵🇹', 'OT': '🌍'
+    };
+    
     socket.on('connect', function() {
         const nickGuardado = localStorage.getItem('nickJugador');
         const paisGuardado = localStorage.getItem('paisJugador');
@@ -384,7 +360,6 @@ const banderas = {
             console.log('🔄 Re-registrando sesión de:', nickGuardado);
             socket.emit('reconectar_sesion', { nick: nickGuardado, pais: paisGuardado });
         }
-        
         console.log('📡 Solicitando lista actualizada de la cola...');
         socket.emit('pedir_cola_espera');
     });
@@ -395,11 +370,13 @@ const banderas = {
         window.location.href = '/login.html';
     });
 
+    socket.on('error_registro', function(data) {
+        alert('⚠️ ' + data.mensaje);
+    });
+
     socket.on('actualizar_contador', function(cantidad) {
         const spanContador = document.getElementById('numero-conectados');
-        if (spanContador) {
-            spanContador.innerText = cantidad;
-        }
+        if (spanContador) spanContador.innerText = cantidad;
     });
 
     function seleccionarTiempo(minutos) {
@@ -408,25 +385,18 @@ const banderas = {
         document.getElementById('minutosPersonalizados').value = '';
         document.querySelectorAll('#selector-tiempo .btn-tiempo').forEach(b => b.classList.remove('active'));
         event.target.classList.add('active');
-        
         document.getElementById('selector-color').style.display = 'grid';
-        console.log('️ Tiempo seleccionado:', minutos, 'minutos');
     }
 
     function usarTiempoPersonalizado(unidad) {
         const input = document.getElementById('minutosPersonalizados');
         const valor = parseInt(input.value);
-        
         if (valor && valor > 0) {
             tiempoElegido = valor;
             tiempoPersonalizadoActivo = true;
-            
             document.querySelectorAll('#selector-tiempo .btn-tiempo').forEach(b => b.classList.remove('active'));
             document.getElementById('btnMinutos').classList.add('active');
-            
             document.getElementById('selector-color').style.display = 'grid';
-            
-            console.log('⏱️ Tiempo personalizado:', tiempoElegido, 'minutos');
         } else {
             alert('Por favor, introduce un número válido de minutos');
         }
@@ -440,15 +410,11 @@ const banderas = {
 
     function iniciarPartida() {
         let incremento = document.getElementById('incremento').value;
-        
         if (tiempoPersonalizadoActivo) {
             const input = document.getElementById('minutosPersonalizados');
             const valor = parseInt(input.value);
-            if (valor && valor > 0) {
-                tiempoElegido = valor;
-            }
+            if (valor && valor > 0) tiempoElegido = valor;
         }
-        
         if (tiempoElegido === 0) {
             alert("Por favor, selecciona un tiempo.");
             return;
@@ -472,30 +438,21 @@ const banderas = {
             usuario: nickJugador,
             pais: paisJugador
         });
+        buscandoPartida = true;
     }
 
     socket.on('partida_encontrada', function(data) {
         console.log('✅ Partida encontrada:', data);
         document.getElementById('btn-cancelar').style.display = 'none';
-        
         localStorage.setItem('salaId', data.sala);
         localStorage.setItem('miColor', data.color);
         localStorage.setItem('rivalNick', data.rival_nick || 'Rival');
         localStorage.setItem('miElo', data.mi_elo || 1200);
         localStorage.setItem('rivalElo', data.rival_elo || 1200);
-        
         window.location.href = "tablero.html";
     });
     
-    socket.on('error_registro', function(data) {
-        alert('⚠️ ' + data.mensaje);
-        document.getElementById('btn-jugar').disabled = false;
-        document.getElementById('mensaje-espera').style.display = 'none';
-        document.getElementById('btn-cancelar').style.display = 'none';
-    });
-
     socket.on('esperando_rival', function(data) {
-        console.log('⏳', data.mensaje);
         document.getElementById('mensaje-espera').innerText = '⏳ ' + data.mensaje;
     });
     
@@ -505,22 +462,10 @@ const banderas = {
         document.getElementById('mensaje-espera').style.display = 'none';
         document.getElementById('btn-cancelar').style.display = 'none';
         buscandoPartida = false;
-        console.log(' Búsqueda cancelada');
     }
 
-    // ============================================
-    // 🏁 SISTEMA DE COLA DE ESPERA CON BANDERAS
-    // ============================================
-
     socket.on('actualizar_cola_espera', function(cola) {
-        console.log('📡 Cola recibida:', cola);
-        
         const lista = document.getElementById('lista-jugadores');
-        if (!lista) {
-            console.error('❌ No existe el elemento #lista-jugadores');
-            return;
-        }
-        
         const miNick = localStorage.getItem('nickJugador') || 'Anónimo';
         
         if (!cola || cola.length === 0) {
@@ -532,60 +477,26 @@ const banderas = {
         let hayOtros = false;
         
         cola.forEach(function(jugador) {
-            if (jugador.nick === miNick) {
-                return;
-            }
-            
+            if (jugador.nick === miNick) return;
             hayOtros = true;
             
-            var eloClass = '';
             var elo = jugador.elo || 1200;
-            if (elo < 1000) {
-                eloClass = '#888';
-            } else if (elo < 1400) {
-                eloClass = '#4CAF50';
-            } else if (elo < 1800) {
-                eloClass = '#2196F3';
-            } else if (elo < 2200) {
-                eloClass = '#ff9800';
-            } else {
-                eloClass = '#f44336';
-            }
-            
-            // 🏁 OBTENER BANDERA DEL PAÍS
+            var eloClass = elo < 1000 ? '#888' : elo < 1400 ? '#4CAF50' : elo < 1800 ? '#2196F3' : elo < 2200 ? '#ff9800' : '#f44336';
             var pais = jugador.pais || 'OT';
             var bandera = banderas[pais] || '🌍';
+            var colorTexto = jugador.color === 'white' ? 'Blancas ♔' : jugador.color === 'black' ? 'Negras ♚' : 'Aleatorio 🎲';
             
-            var colorTexto = '';
-            var colorIcono = '';
-            if (jugador.color === 'white') {
-                colorTexto = 'Blancas';
-                colorIcono = '♔';
-            } else if (jugador.color === 'black') {
-                colorTexto = 'Negras';
-                colorIcono = '♚';
-            } else {
-                colorTexto = 'Aleatorio';
-                colorIcono = '🎲';
-            }
-            
-            html += '<div class="jugador-cola" onclick="unirseARival(\'' + jugador.id + '\', \'' + jugador.nick + '\', ' + jugador.tiempo + ', ' + jugador.incremento + ')">';
-            html += '  <div class="jugador-info">';
-            html += '    <span class="jugador-nick">' + bandera + ' ' + jugador.nick + '</span>';
-            html += '    <span class="jugador-elo" style="color: ' + eloClass + '">🏆 ELO: ' + elo + '</span>';
-            html += '    <span class="jugador-ritmo">⏱️ ' + jugador.tiempo + '+' + jugador.incremento + 's</span>';
-            html += '    <span class="jugador-pais">' + colorIcono + ' ' + colorTexto + '</span>';
-            html += '  </div>';
-            html += '  <button class="btn-unirse">Jugar</button>';
-            html += '</div>';
+            html += `<div class="jugador-cola" onclick="unirseARival('${jugador.id}', '${jugador.nick}', ${jugador.tiempo}, ${jugador.incremento})">
+                <div class="jugador-info">
+                    <span class="jugador-nick">${bandera} ${jugador.nick}</span>
+                    <span class="jugador-elo" style="color: ${eloClass}">🏆 ELO: ${elo}</span>
+                    <span class="jugador-ritmo">⏱️ ${jugador.tiempo}+${jugador.incremento}s | ${colorTexto}</span>
+                </div>
+                <button class="btn-unirse">Jugar</button>
+            </div>`;
         });
         
-        if (hayOtros) {
-            lista.innerHTML = html;
-            console.log('✅ Lista renderizada con ' + cola.length + ' jugadores');
-        } else {
-            lista.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay otros jugadores en espera.</p>';
-        }
+        lista.innerHTML = hayOtros ? html : '<p style="color: #666; text-align: center; padding: 20px;">No hay otros jugadores en espera.</p>';
     });
 
     function unirseARival(rivalId, rivalNick, tiempo, incremento) {
@@ -593,31 +504,15 @@ const banderas = {
             alert('⚠️ Cancela tu búsqueda actual antes de unirte a otro jugador.');
             return;
         }
-        
-        console.log('✅ Uniéndose directamente a:', rivalNick, 'con tiempo', tiempo + '+' + incremento + 's');
         localStorage.setItem('tiempoPartida', tiempo);
         localStorage.setItem('incrementoPartida', incremento);
         localStorage.setItem('colorElegido', 'random');
-        
         socket.emit('unirse_a_rival', { rival_id: rivalId });
     }
 
     socket.on('error_unirse', function(data) {
         alert('⚠️ ' + data.mensaje);
     });
-
-    var originalIniciarPartida = iniciarPartida;
-    iniciarPartida = function() {
-        originalIniciarPartida();
-        buscandoPartida = true;
-    };
-
-    var originalCancelarBusqueda = cancelarBusqueda;
-    cancelarBusqueda = function() {
-        originalCancelarBusqueda();
-        buscandoPartida = false;
-    };
-
-    console.log('✅ Sistema de cola inicializado');
 </script>
+</body>
 </html>
