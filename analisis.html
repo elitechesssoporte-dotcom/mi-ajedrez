@@ -141,16 +141,22 @@
             if (!analizando) return;
             
             if (line.startsWith('info') && line.includes('score cp')) {
-                var match = line.match(/score cp (-?\d+)/);
-                if (match) {
-                    var score = parseInt(match[1]);
-                    if (game.turn() === 'b') score = -score;
-                    var evalPct = 50 + (score / 10);
-                    evalPct = Math.max(5, Math.min(95, evalPct));
-                    document.getElementById('barraBlanca').style.height = evalPct + '%';
-                    document.getElementById('resultadoEval').innerText = 'Evaluación: ' + (score/100).toFixed(2);
-                }
-            }
+    const scoreMatch = line.match(/score cp (-?\d+)/);
+    if (scoreMatch) {
+        let score = parseInt(scoreMatch[1]);
+        
+        // ✅ Obtener el FEN actual y ver de quién es el turno
+        const fen = document.getElementById('fenInput').value;
+        if (fen && fen.includes(' b ')) {
+            // Si es turno de negras, invertir la evaluación
+            score = -score;
+        }
+        
+        const evalPct = (score / 100).toFixed(2);
+        const signo = score >= 0 ? '+' : '';
+        document.getElementById('eval').innerText = signo + evalPct;
+    }
+}
             
             // Solo la mejor jugada (multipv 1)
             if (line.startsWith('info') && line.includes('multipv 1') && line.includes('pv')) {
