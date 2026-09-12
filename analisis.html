@@ -120,7 +120,7 @@
 
         function cargarStockfish() {
     try {
-        stockfish = new Worker('stockfish-18-single.js');
+        stockfish = new Worker('stockfish-nnue-16-single.js');
         
         stockfish.onmessage = function(event) {
             var line = event.data;
