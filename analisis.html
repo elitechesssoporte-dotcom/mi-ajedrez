@@ -289,25 +289,29 @@
 }
 
         // --- ANÁLISIS ---
-        function iniciarAnalisis() {
-    if (!stockfish) {
-        cargarStockfish();
-        setTimeout(iniciarAnalisis, 1000);
-        return;
-    }
-    
-    if (!stockfishListo) {
-        document.getElementById('resultadoEval').innerText = "⏳ Cargando motor...";
-        setTimeout(iniciarAnalisis, 500);
-        return;
-    }
-    
-    stockfish.postMessage('stop');
-    analizando = true;
-    document.getElementById('mejorJugada').innerText = "";
-    
-    stockfish.postMessage('position fen ' + game.fen());
-    stockfish.postMessage('go depth 12');
+                function iniciarAnalisis() {
+            if (!stockfish) {
+                cargarStockfish();
+                setTimeout(iniciarAnalisis, 1000);
+                return;
+            }
+            
+            if (!stockfishListo) {
+                document.getElementById('resultadoEval').innerText = "⏳ Cargando motor...";
+                setTimeout(iniciarAnalisis, 500);
+                return;
+            }
+            
+            // Detener cualquier análisis anterior
+            stockfish.postMessage('stop');
+            analizando = true;
+            document.getElementById('mejorJugada').innerText = "Calculando...";
+            
+            // ✅ CAMBIO CLAVE: Usar 'depth 12' en lugar de tiempo.
+            // Es instantáneo (1-2 segundos) y muy preciso para ver errores al momento.
+            stockfish.postMessage('position fen ' + game.fen());
+            stockfish.postMessage('go depth 12');
+        }
     
     setTimeout(() => {
         if (analizando) {
