@@ -66,7 +66,7 @@ def emitir_cola_espera():
     
     print(f"📤 Enviando evento 'actualizar_cola_espera' con {len(cola_info)} jugadores")
     emit('actualizar_cola_espera', cola_info, broadcast=True)
-    
+
 # --- RUTAS ---
 @app.route('/')
 def index():
@@ -156,13 +156,31 @@ def obtener_elo(nick, categoria='blitz'):
     try:
         if categoria not in ['bullet', 'blitz', 'rapid']:
             categoria = 'blitz'
+        
+        nick_limpio = str(nick).strip()
         columna = f'elo_{categoria}'
         
-        response = supabase.table('usuarios').select(columna).eq('nick', nick).execute()
+        # Consultamos TODOS los ELOs de una vez para depurar y evitar fallos de columna
+        response = supabase.table('usuarios').select('nick, elo_bullet, elo_blitz, elo_rapid').ilike('nick', nick_limpio).execute()
+        
         if response.data and len(response.data) > 0:
-            return response.data[0][columna]
+            usuario = response.data[0]
+            elo_valor = usuario.get(columna)
+            
+            # 🕵️ LOG DE DEPURACIÓN: Nos muestra exactamente qué devolvió la BD
+            print(f"🔍 DB Response para '{nick_limpio}': {usuario}")
+            
+            if elo_valor is None:
+                print(f"⚠️ Usuario '{nick_limpio}' encontrado, pero '{columna}' es NULL. Devolviendo 1200")
+                return 1200
+            
+            print(f"✅ ÉXITO: ELO de '{nick_limpio}' en {categoria} es {elo_valor}")
+            return elo_valor
+        
+        print(f"⚠️ Usuario '{nick_limpio}' NO encontrado en DB, devolviendo 1200")
         return 1200
-    except:
+    except Exception as e:
+        print(f"❌ Error al obtener ELO de '{nick}': {e}")
         return 1200
 
 def actualizar_elo_db(nick, nuevo_elo, categoria='blitz'):
@@ -175,7 +193,102 @@ def actualizar_elo_db(nick, nuevo_elo, categoria='blitz'):
         print(f"✅ ELO {categoria} actualizado para {nick}: {nuevo_elo}")
     except Exception as e:
         print(f"❌ Error actualizar ELO {categoria}: {e}")
-
+# --- CONTROL DE TIEMPO DEL SERVIDOR (Autoridad absoluta) ---
+# --- CONTROL DE TIEMPO DEL SERVIDOR (Autoridad absoluta) ---
+def monitor_tiempos():
+    """Hilo en segundo plano que verifica y emite el tiempo real cada 0.5 segundos"""
+    while True:
+        time.sleep(0.5)
+        ahora = time.time()
+        
+        # Copiamos las claves para evitar errores si se borra una sala mientras iteramos
+        for sala_id in list(salas.keys()):
+            sala = salas[sala_id]
+            
+            # Si la partida ya terminó, la ignoramos
+            if sala.get('partida_terminada', False):
+                continue
+            
+            tiempo_transcurrido = ahora - sala.get('ultimo_movimiento', ahora)
+            t_b = sala.get('tiempo_restante_blanco', 300)
+            t_n = sala.get('tiempo_restante_negro', 300)
+            turno = sala.get('turno', 'blanco')
+            
+            # Calcular tiempo real en este instante
+            if turno == 'blanco':
+                t_b_real = max(0, t_b - tiempo_transcurrido)
+                t_n_real = t_n
+            else:
+                t_b_real = t_b
+                t_n_real = max(0, t_n - tiempo_transcurrido)
+            
+            # 1. Emitir el tiempo real a los clientes para que sus relojes se sincronicen
+            socketio.emit('actualizacion_tiempo_servidor', {
+                'blancas': round(t_b_real, 1),
+                'negras': round(t_n_real, 1)
+            }, room=sala_id)
+            
+            # 2. Verificar si alguien se ha quedado a 0
+            ganador = None
+            if t_b_real <= 0:
+                print(f"⏰ ¡Tiempo agotado! Ganan las NEGRAS en sala {sala_id}")
+                ganador = 'negro'
+            elif t_n_real <= 0:
+                print(f"⏰ ¡Tiempo agotado! Ganan las BLANCAS en sala {sala_id}")
+                ganador = 'blanco'
+            
+            # 3. Si hay un ganador por tiempo, finalizar la partida AQUÍ MISMO
+            if ganador:
+                sala['partida_terminada'] = True
+                if 'desconectado' in sala:
+                    del sala['desconectado']
+                
+                nick_blanco = sala.get('blanco')
+                nick_negro = sala.get('negro')
+                tiempo_partida = sala.get('tiempo', 5)
+                categoria = obtener_categoria(tiempo_partida)
+                
+                nuevo_elo_blanco = 1200
+                nuevo_elo_negro = 1200
+                
+                try:
+                    elo_blanco = obtener_elo(nick_blanco, categoria)
+                    elo_negro = obtener_elo(nick_negro, categoria)
+                    
+                    if ganador == 'blanco':
+                        nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'victoria')
+                        nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'derrota')
+                        if not sala.get('estadisticas_actualizadas', False):
+                            actualizar_estadisticas_db(nick_blanco, 'victoria', categoria)
+                            actualizar_estadisticas_db(nick_negro, 'derrota', categoria)
+                            sala['estadisticas_actualizadas'] = True
+                    else:
+                        nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'derrota')
+                        nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'victoria')
+                        if not sala.get('estadisticas_actualizadas', False):
+                            actualizar_estadisticas_db(nick_blanco, 'derrota', categoria)
+                            actualizar_estadisticas_db(nick_negro, 'victoria', categoria)
+                            sala['estadisticas_actualizadas'] = True
+                    
+                    actualizar_elo_db(nick_blanco, nuevo_elo_blanco, categoria)
+                    actualizar_elo_db(nick_negro, nuevo_elo_negro, categoria)
+                    
+                    sala['elo_blanco'] = nuevo_elo_blanco
+                    sala['elo_negro'] = nuevo_elo_negro
+                    
+                except Exception as e:
+                    print(f"❌ Error al actualizar ELO por tiempo: {e}")
+                
+                # Emitir el final de la partida a los clientes
+                socketio.emit('partida_finalizada', {
+                    'motivo': 'tiempo',
+                    'ganador': ganador,
+                    'elo_blanco': nuevo_elo_blanco,
+                    'elo_negro': nuevo_elo_negro
+                }, room=sala_id)
+                
+                print(f"✅ Partida finalizada en sala {sala_id} por tiempo - Ganador: {ganador}")
+# Iniciar el monitor de tiempos al arrancar el servidor (se hace al final del archivo)
 # --- EVENTOS SOCKET.IO ---
 
 @socketio.on('connect')
@@ -188,7 +301,7 @@ def handle_connect(auth=None):  # 🆕 Añadido 'auth=None' para evitar el error
     emit('actualizar_contador', len(sids_activos), broadcast=True)
 
 @socketio.on('disconnect')
-def handle_disconnect():
+def handle_disconnect(reason=None):
     global usuarios_conectados, cola_espera, partidas_activas, temporizadores_reconexion
     jugador_id = request.sid
     print(f" Jugador {jugador_id} desconectado")
@@ -397,8 +510,33 @@ def handle_disconnect():
         print(f"   ✅ Sesión liberada correctamente")
     
     # 🆕 Añade esta línea al final de la función handle_disconnect (mismo nivel de indentación que el print de arriba)
-    emit('actualizar_contador', len(sids_activos), broadcast=True)
+        #  NUEVO: Eliminar jugador de todos los torneos activos
+        # 🆕 CORREGIDO: Limpieza de torneos al desconectar
 
+        # 🆕 CORREGIDO Y SEGURO: Limpieza de torneos al desconectar
+        #  CORREGIDO Y SEGURO: Limpieza de torneos al desconectar
+    if nick_desconectado:
+        for torneo_id, torneo in torneos.items():
+            # 1. Sacarlo de la cola de búsqueda para que no lo emparejen mientras está offline
+            if torneo_id in colas_torneo and nick_desconectado in colas_torneo[torneo_id]:
+                colas_torneo[torneo_id].remove(nick_desconectado)
+                print(f"🗑️ {nick_desconectado} sacado de la cola del torneo {torneo['nombre']} por desconexión")
+            
+            # 2. IMPORTANTE: NO eliminamos al jugador de torneo['jugadores'] ni borramos sus puntos.
+            # Una desconexión no debe expulsarlo del torneo. Conservará sus puntos y podrá
+            # reconectar para seguir jugando donde lo dejó.
+            print(f" {nick_desconectado} mantiene su lugar en el torneo {torneo['nombre']} (está en partida)")
+        
+        # Notificar a los demás jugadores del torneo
+        for jugador_sid in list(sids_activos):
+            try:
+                emit('clasificacion_torneo', obtener_clasificacion_torneo(torneo_id), room=jugador_sid)
+            except:
+                pass
+
+    #  Actualizar contador de usuarios
+    emit('actualizar_contador', len(sids_activos), broadcast=True)
+    
 @socketio.on('registro')
 def registro(data):
     global usuarios_conectados
@@ -422,9 +560,22 @@ def registro(data):
         
         password_hash = hash_password(password)
         response = supabase.table('usuarios').insert({
-            'nick': nick,
-            'password_hash': password_hash
-        }).execute()
+    'nick': nick,
+    'password_hash': password_hash,
+    'elo_bullet': 1200,
+    'elo_blitz': 1200,
+    'elo_rapid': 1200,
+    'partidas_ganadas_bullet': 0,
+    'partidas_perdidas_bullet': 0,
+    'partidas_tablas_bullet': 0,
+    'partidas_ganadas_blitz': 0,
+    'partidas_perdidas_blitz': 0,
+    'partidas_tablas_blitz': 0,
+    'partidas_ganadas_rapid': 0,
+    'partidas_perdidas_rapid': 0,
+    'partidas_tablas_rapid': 0,
+    'pais': 'ES'
+}).execute()
         
         user_id = response.data[0]['id']
         print(f"✅ Usuario registrado: {nick} (ID: {user_id})")
@@ -714,10 +865,13 @@ def buscar_partida(data):
                 'negro': nick_negro,
                 'partida_terminada': False,
                 'tiempo': data.get('tiempo'),
-                'incremento': data.get('incremento'),
+                'incremento': data.get('incremento', 0),
                 'estadisticas_actualizadas': False,
-                'segundos_blanco': tiempo_inicial_segundos,
-                'segundos_negro': tiempo_inicial_segundos
+                'tiempo_restante_blanco': tiempo_inicial_segundos, # 🆕
+                'tiempo_restante_negro': tiempo_inicial_segundos,   # 🆕
+                'ultimo_movimiento': time.time(),                   # 🆕 Timestamp del servidor
+                'turno': 'blanco'                                   # 🆕 Quién empieza
+            
             }
             
             join_room(sala_id, sid=jugador1['id'])
@@ -767,8 +921,8 @@ def buscar_partida(data):
 @socketio.on('pedir_cola_espera')
 def pedir_cola_espera():
     print(f"📋 Alguien pidió la cola manualmente")
-    emitir_cola_espera()
-    
+    emitir_cola_espera()       
+
 @socketio.on('reunirse_a_sala')
 def reunirse_a_sala(data):
     sala_id = data.get('sala')
@@ -820,22 +974,28 @@ def solicitar_estado_partida(data):
             fen_actual = estado_partidas[sala_id].get('fen', 'start')
             movimientos = estado_partidas[sala_id].get('movimientos', [])
         
-        tiempo_inicial = sala.get('tiempo', 5) * 60
-        segundos_blanco = sala.get('segundos_blanco', tiempo_inicial)
-        segundos_negro = sala.get('segundos_negro', tiempo_inicial)
+        # 🆕 Calcular tiempos reales al reconectar
+        ahora = time.time()
+        tiempo_transcurrido = ahora - sala.get('ultimo_movimiento', ahora)
+        t_b = sala.get('tiempo_restante_blanco', 300)
+        t_n = sala.get('tiempo_restante_negro', 300)
+        
+        if sala.get('turno') == 'blanco':
+            segundos_blanco = max(0, t_b - tiempo_transcurrido)
+            segundos_negro = t_n
+        else:
+            segundos_blanco = t_b
+            segundos_negro = max(0, t_n - tiempo_transcurrido)
         
         emit('estado_partida', {
             'fen': fen_actual,
             'movimientos': movimientos,
-            'segundos_blanco': segundos_blanco,
-            'segundos_negro': segundos_negro,
+            'segundos_blanco': round(segundos_blanco, 1),
+            'segundos_negro': round(segundos_negro, 1),
             'terminada': sala.get('partida_terminada', False)
         })
         
-        print(f"📊 Estado enviado a reconectado - FEN: {fen_actual[:40] if fen_actual else 'start'}...")
-        print(f"⏱️ Tiempos - Blancas: {segundos_blanco}s, Negras: {segundos_negro}s")
-    else:
-        print(f"❌ Sala {sala_id} no encontrada al solicitar estado")
+        print(f"📊 Estado enviado a reconectado - Tiempos reales: B={round(segundos_blanco, 1)}s, N={round(segundos_negro, 1)}s")
         
 @socketio.on('actualizar_tiempos')
 def actualizar_tiempos(data):
@@ -854,10 +1014,11 @@ def mover_pieza(data):
     sala_id = data.get('sala')
     movimiento = data.get('movimiento')
     fen = data.get('fen')
-    segundos_blanco = data.get('segundos_blanco')
-    segundos_negro = data.get('segundos_negro')
+    # Ya no necesitamos que el cliente nos envíe los segundos, el servidor los calcula
     
     if sala_id in salas:
+        sala = salas[sala_id]
+        
         if sala_id not in estado_partidas:
             estado_partidas[sala_id] = {
                 'fen': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -868,18 +1029,30 @@ def mover_pieza(data):
             estado_partidas[sala_id]['fen'] = fen
         estado_partidas[sala_id]['movimientos'].append(movimiento)
         
-        if segundos_blanco is not None:
-            salas[sala_id]['segundos_blanco'] = segundos_blanco
-        if segundos_negro is not None:
-            salas[sala_id]['segundos_negro'] = segundos_negro
+        # --- CÁLCULO DE TIEMPO DEL SERVIDOR ---
+        ahora = time.time()
+        tiempo_transcurrido = ahora - sala['ultimo_movimiento']
+        
+        # ✅ FIX: Convertir incremento a número (float) para evitar errores
+        incremento = float(sala.get('incremento', 0))
+        
+        if sala['turno'] == 'blanco':
+            # Restar tiempo gastado y sumar incremento
+            sala['tiempo_restante_blanco'] = max(0, sala['tiempo_restante_blanco'] - tiempo_transcurrido) + incremento
+            sala['turno'] = 'negro'
+        else:
+            sala['tiempo_restante_negro'] = max(0, sala['tiempo_restante_negro'] - tiempo_transcurrido) + incremento
+            sala['turno'] = 'blanco'
             
-        print(f"💾 Tiempos guardados en sala {sala_id}: Blancas={segundos_blanco}s, Negras={segundos_negro}s") 
-        print(f"💾 FEN guardado para sala {sala_id}: {fen[:50] if fen else 'N/A'}...")
+        # Actualizar el timestamp para el siguiente movimiento
+        sala['ultimo_movimiento'] = time.time()
+        
+        print(f"💾 Movimiento en {sala_id}. Turno ahora: {sala['turno']}. Tiempos reales: B={round(sala['tiempo_restante_blanco'], 1)}s, N={round(sala['tiempo_restante_negro'], 1)}s")
         
         emit('recibir_movimiento', {
             'movimiento': movimiento
-        }, room=sala_id, include_self=False)        
-
+        }, room=sala_id, include_self=False)
+        
 @socketio.on('cancelar_partida')
 def cancelar_partida(data):
     sala_id = data.get('sala')
@@ -945,15 +1118,25 @@ def fin_partida(data):
     motivo = data.get('motivo')
     ganador = data.get('ganador')
     
+    # 1. Verificar si la partida ya terminó
     if sala_id in salas and salas[sala_id].get('partida_terminada', False):
         print(f"⚠️ Intento de finalizar partida ya terminada en {sala_id}, ignorando...")
         return
     
+    # 2. Normalizar el ganador (white/black → blanco/negro)
     if ganador == 'white':
         ganador = 'blanco'
     elif ganador == 'black':
         ganador = 'negro'
     
+    # 3. MARCAR LA PARTIDA COMO TERMINADA INMEDIATAMENTE
+    #    Esto evita que 'aceptar_tablas' pueda sobrescribir el resultado
+    if sala_id in salas:
+        salas[sala_id]['partida_terminada'] = True
+        if 'desconectado' in salas[sala_id]:
+            del salas[sala_id]['desconectado']
+    
+    # 4. Limpiar temporizadores de reconexión
     for sid, s_id in list(partidas_activas.items()):
         if s_id == sala_id:
             nick_temp = None
@@ -967,108 +1150,134 @@ def fin_partida(data):
                     timer.cancel()
                 del temporizadores_reconexion[nick_temp]
 
+    # 5. Limpiar control de tablas
     if sala_id in control_tablas:
         del control_tablas[sala_id]
-        print(f" Control de tablas reseteado en sala {sala_id}")
+        print(f"🗑️ Control de tablas reseteado en sala {sala_id}")
     
-    if sala_id in salas:
-        salas[sala_id]['partida_terminada'] = True
-        if 'desconectado' in salas[sala_id]:
-            del salas[sala_id]['desconectado']
+    # 6. Procesar ELO y estadísticas
+    sala = salas[sala_id]
+    nick_blanco = sala.get('blanco')
+    nick_negro = sala.get('negro')
+    
+    tiempo_partida = sala.get('tiempo', 5)
+    categoria = obtener_categoria(tiempo_partida)
+    print(f"📊 Categoría de la partida: {categoria} ({tiempo_partida} min)")
+    
+    nuevo_elo_blanco = 1200
+    nuevo_elo_negro = 1200
+    
+    try:
+        elo_blanco = obtener_elo(nick_blanco, categoria)
+        elo_negro = obtener_elo(nick_negro, categoria)
         
-        sala = salas[sala_id]
-        nick_blanco = sala.get('blanco')
-        nick_negro = sala.get('negro')
+        print(f" Partida: {nick_blanco} (ELO {categoria}: {elo_blanco}) vs {nick_negro} (ELO {categoria}: {elo_negro})")
+        print(f"🏆 Ganador: {ganador} | Motivo: {motivo}")
         
-        tiempo_partida = sala.get('tiempo', 5)
-        categoria = obtener_categoria(tiempo_partida)
-        print(f"📊 Categoría de la partida: {categoria} ({tiempo_partida} min)")
-        
-        nuevo_elo_blanco = 1200
-        nuevo_elo_negro = 1200
-        
-        try:
-            elo_blanco = obtener_elo(nick_blanco, categoria)
-            elo_negro = obtener_elo(nick_negro, categoria)
+        if ganador == 'blanco':
+            nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'victoria')
+            nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'derrota')
             
-            print(f" Partida: {nick_blanco} (ELO {categoria}: {elo_blanco}) vs {nick_negro} (ELO {categoria}: {elo_negro})")
-            print(f"🏆 Ganador: {ganador}")
+            if not salas[sala_id].get('estadisticas_actualizadas', False):
+                actualizar_estadisticas_db(nick_blanco, 'victoria', categoria)
+                actualizar_estadisticas_db(nick_negro, 'derrota', categoria)
+                salas[sala_id]['estadisticas_actualizadas'] = True
+            
+        elif ganador == 'negro':
+            nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'derrota')
+            nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'victoria')
+            
+            if not salas[sala_id].get('estadisticas_actualizadas', False):
+                actualizar_estadisticas_db(nick_blanco, 'derrota', categoria)
+                actualizar_estadisticas_db(nick_negro, 'victoria', categoria)
+                salas[sala_id]['estadisticas_actualizadas'] = True
+            
+        else:
+            nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'tablas')
+            nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'tablas')
+            
+            if not salas[sala_id].get('estadisticas_actualizadas', False):
+                actualizar_estadisticas_db(nick_blanco, 'tablas', categoria)
+                actualizar_estadisticas_db(nick_negro, 'tablas', categoria)
+                salas[sala_id]['estadisticas_actualizadas'] = True
+        
+        print(f"📊 {nick_blanco}: {elo_blanco} → {nuevo_elo_blanco}")
+        print(f"📊 {nick_negro}: {elo_negro} → {nuevo_elo_negro}")
+        
+        actualizar_elo_db(nick_blanco, nuevo_elo_blanco, categoria)
+        actualizar_elo_db(nick_negro, nuevo_elo_negro, categoria)
+        
+        salas[sala_id]['elo_blanco'] = nuevo_elo_blanco
+        salas[sala_id]['elo_negro'] = nuevo_elo_negro
+        print(f"💾 ELOs guardados en sala {sala_id}: Blanco={nuevo_elo_blanco}, Negro={nuevo_elo_negro}")
+        
+    except Exception as e:
+        print(f"❌ Error al actualizar ELO: {e}")
+    
+    # 7. ✅ CORREGIDO: Usar las variables reales 'motivo' y 'ganador'
+    emit('partida_finalizada', {
+        'motivo': motivo,
+        'ganador': ganador,
+        'elo_blanco': nuevo_elo_blanco,
+        'elo_negro': nuevo_elo_negro
+    }, room=sala_id)
+    print(f"✅ Partida finalizada en sala {sala_id} - Motivo: {motivo} - Ganador: {ganador}")
+    
+    # 8. ✅ CORREGIDO: Actualizar puntos del torneo según el resultado REAL
+    if sala_id in partidas_torneo_activas:
+        partida_torneo = partidas_torneo_activas[sala_id]
+        torneo_id = partida_torneo['torneo_id']
+        
+        if torneo_id in torneos:
+            torneo = torneos[torneo_id]
+            
+            # Determinar quién es jugador1 y jugador2 según el color
+            j1 = partida_torneo['jugador1']
+            j2 = partida_torneo['jugador2']
             
             if ganador == 'blanco':
-                nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'victoria')
-                nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'derrota')
-                
-                if not salas[sala_id].get('estadisticas_actualizadas', False):
-                    actualizar_estadisticas_db(nick_blanco, 'victoria', categoria)
-                    actualizar_estadisticas_db(nick_negro, 'derrota', categoria)
-                    salas[sala_id]['estadisticas_actualizadas'] = True
-                
-            elif ganador == 'negro':
-                nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'derrota')
-                nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'victoria')
-                
-                if not salas[sala_id].get('estadisticas_actualizadas', False):
-                    actualizar_estadisticas_db(nick_blanco, 'derrota', categoria)
-                    actualizar_estadisticas_db(nick_negro, 'victoria', categoria)
-                    salas[sala_id]['estadisticas_actualizadas'] = True
-                
-            else:
-                nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'tablas')
-                nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'tablas')
-                
-                if not salas[sala_id].get('estadisticas_actualizadas', False):
-                    actualizar_estadisticas_db(nick_blanco, 'tablas', categoria)
-                    actualizar_estadisticas_db(nick_negro, 'tablas', categoria)
-                    salas[sala_id]['estadisticas_actualizadas'] = True
-            
-            print(f"📊 {nick_blanco}: {elo_blanco} → {nuevo_elo_blanco}")
-            print(f"📊 {nick_negro}: {elo_negro} → {nuevo_elo_negro}")
-            
-            actualizar_elo_db(nick_blanco, nuevo_elo_blanco, categoria)
-            actualizar_elo_db(nick_negro, nuevo_elo_negro, categoria)
-            
-            salas[sala_id]['elo_blanco'] = nuevo_elo_blanco
-            salas[sala_id]['elo_negro'] = nuevo_elo_negro
-            print(f"💾 ELOs guardados en sala {sala_id}: Blanco={nuevo_elo_blanco}, Negro={nuevo_elo_negro}")
-            
-        except Exception as e:
-            print(f"❌ Error al actualizar ELO: {e}")
-        
-        emit('partida_finalizada', {
-            'motivo': motivo,
-            'ganador': ganador,
-            'elo_blanco': nuevo_elo_blanco,
-            'elo_negro': nuevo_elo_negro
-        }, room=sala_id)
-        print(f"✅ Partida finalizada en sala {sala_id} - Motivo: {motivo}")              
-        
-        if sala_id in partidas_torneo_activas:
-            partida_torneo = partidas_torneo_activas[sala_id]
-            torneo_id = partida_torneo['torneo_id']
-            
-            if torneo_id in torneos:
-                torneo = torneos[torneo_id]
-                
-                if ganador == 'white':
-                    torneo['puntos'][partida_torneo['jugador1']] = torneo['puntos'].get(partida_torneo['jugador1'], 0) + 2
-                    torneo['puntos'][partida_torneo['jugador2']] = torneo['puntos'].get(partida_torneo['jugador2'], 0) + 0
-                elif ganador == 'black':
-                    torneo['puntos'][partida_torneo['jugador1']] = torneo['puntos'].get(partida_torneo['jugador1'], 0) + 0
-                    torneo['puntos'][partida_torneo['jugador2']] = torneo['puntos'].get(partida_torneo['jugador2'], 0) + 2
+                # Blanco gana: +2 al blanco, +0 al negro
+                if partida_torneo.get('color1') == 'white':
+                    torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 2
+                    torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 0
+                    print(f"🏆 {j1} (blanco) gana +2 pts, {j2} (negro) +0 pts")
                 else:
-                    torneo['puntos'][partida_torneo['jugador1']] = torneo['puntos'].get(partida_torneo['jugador1'], 0) + 1
-                    torneo['puntos'][partida_torneo['jugador2']] = torneo['puntos'].get(partida_torneo['jugador2'], 0) + 1
+                    torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 0
+                    torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 2
+                    print(f"🏆 {j2} (blanco) gana +2 pts, {j1} (negro) +0 pts")
+                    
+            elif ganador == 'negro':
+                # Negro gana: +0 al blanco, +2 al negro
+                if partida_torneo.get('color1') == 'white':
+                    torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 0
+                    torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 2
+                    print(f"🏆 {j2} (negro) gana +2 pts, {j1} (blanco) +0 pts")
+                else:
+                    torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 2
+                    torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 0
+                    print(f"🏆 {j1} (negro) gana +2 pts, {j2} (blanco) +0 pts")
+                    
+            else:
+                # Tablas: +1 a cada uno
+                torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 1
+                torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 1
+                print(f"🤝 Tablas: {j1} +1 pt, {j2} +1 pt")
+            
+            print(f"📊 Puntos actuales en torneo {torneo['nombre']}: {torneo['puntos']}")
+            
+            del partidas_torneo_activas[sala_id]
+            
+            # Liberar jugadores para nuevo emparejamiento
+            for jugador in torneo['jugadores']:
+                sid = usuarios_conectados.get(jugador)
+                if sid and sid in sids_activos:
+                    socketio.emit('clasificacion_torneo', 
+                                 obtener_clasificacion_torneo(torneo_id), room=sid)
+                    socketio.emit('jugadores_torneo', 
+                                 torneo['jugadores'], room=sid)
+                    socketio.emit('puedes_buscar', room=sid)
+                    print(f"🔄 {jugador} liberado para nuevo emparejamiento")
                 
-                del partidas_torneo_activas[sala_id]
-                
-                for jugador in torneo['jugadores']:
-                    for sid, nick in usuarios_conectados.items():
-                        if nick == jugador:
-                            socketio.emit('clasificacion_torneo', obtener_clasificacion_torneo(torneo_id), room=sid)
-                            break
-                
-                print(f"🏆 Puntos actualizados en torneo {torneo['nombre']}")
-
 @socketio.on('verificar_partida')
 def verificar_partida(data):
     sala_id = data.get('sala')
@@ -1162,8 +1371,9 @@ def oferta_tablas(data):
 def aceptar_tablas(data):
     sala_id = data.get('sala')
     
+    # 1. Verificar si la partida ya terminó (evita sobrescribir jaque mate)
     if sala_id in salas and salas[sala_id].get('partida_terminada', False):
-        print(f"️ Intento de tablas en partida ya terminada en {sala_id}, ignorando...")
+        print(f"⚠️ Intento de aceptar tablas en partida ya terminada en {sala_id}, ignorando...")
         return
     
     if sala_id in salas:
@@ -1210,7 +1420,6 @@ def aceptar_tablas(data):
             
         except Exception as e:
             print(f"❌ Error al actualizar ELO en tablas: {e}")
-            emitir_cola_espera()  # 🆕 Avisar que se eliminó de la cola
         
         emit('partida_finalizada', {
             'motivo': 'tablas',
@@ -1218,6 +1427,36 @@ def aceptar_tablas(data):
             'elo_blanco': nuevo_elo_blanco,
             'elo_negro': nuevo_elo_negro
         }, room=sala_id)
+        
+        # 🆕 ACTUALIZAR PUNTOS DEL TORNEO EN CASO DE TABLAS
+        if sala_id in partidas_torneo_activas:
+            partida_torneo = partidas_torneo_activas[sala_id]
+            torneo_id = partida_torneo['torneo_id']
+            
+            if torneo_id in torneos:
+                torneo = torneos[torneo_id]
+                j1 = partida_torneo['jugador1']
+                j2 = partida_torneo['jugador2']
+                
+                # En tablas, ambos suman 1 punto
+                torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 1
+                torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 1
+                
+                print(f"🤝 Tablas en torneo: {j1} +1 pt, {j2} +1 pt")
+                print(f"📊 Puntos actuales en torneo {torneo['nombre']}: {torneo['puntos']}")
+                
+                del partidas_torneo_activas[sala_id]
+                
+                # Liberar jugadores para nuevo emparejamiento
+                for jugador in torneo['jugadores']:
+                    sid = usuarios_conectados.get(jugador)
+                    if sid and sid in sids_activos:
+                        socketio.emit('clasificacion_torneo', 
+                                     obtener_clasificacion_torneo(torneo_id), room=sid)
+                        socketio.emit('jugadores_torneo', 
+                                     torneo['jugadores'], room=sid)
+                        socketio.emit('puedes_buscar', room=sid)
+                        print(f"🔄 {jugador} liberado para nuevo emparejamiento")
         
         print(f"✅ Tablas aceptadas en sala {sala_id} - ELOs actualizados")
 
@@ -1310,7 +1549,8 @@ def cancelar_busqueda():
     cola_espera = [j for j in cola_espera if j['id'] != jugador_id]
     
     print(f"❌ Jugador {jugador_id} canceló la búsqueda")
-    emit('busqueda_cancelada', {'mensaje': 'Búsqueda cancelada correctamente'})       
+    emit('busqueda_cancelada', {'mensaje': 'Búsqueda cancelada correctamente'})
+    emitir_cola_espera()  # 🆕 Avisar que se eliminó de la cola       
 
 @socketio.on('obtener_clasificacion')
 def obtener_clasificacion(data):
@@ -1396,24 +1636,35 @@ def obtener_lista_torneos():
 @socketio.on('pedir_torneos')
 def pedir_torneos():
     print("📋 Alguien pidió la lista de torneos")
-    emit('lista_torneos_actualizada', obtener_lista_torneos())
-
-def obtener_clasificacion_torneo(torneo_id):
-    if torneo_id not in torneos:
-        return []
     
-    torneo = torneos[torneo_id]
-    clasificacion = []
+    # Combinar torneos normales y suizos
+    lista_combinada = []
     
-    for jugador, puntos in torneo['puntos'].items():
-        clasificacion.append({
-            'nick': jugador,
-            'puntos': puntos
-        })
+    # Torneos normales
+    for tid, t in torneos.items():
+        if t.get('activo', False):
+            lista_combinada.append({
+                'id': tid,
+                'nombre': t['nombre'],
+                'tiempo': t.get('tiempo', 5),
+                'duracion': t.get('duracion', 1800),
+                'jugadores': len(t.get('jugadores', [])),
+                'tipo': 'normal'
+            })
     
-    clasificacion.sort(key=lambda x: x['puntos'], reverse=True)
+    # Torneos suizos
+    for tid, t in torneos_suizos.items():
+        if t.get('activo', True):  # Los suizos están activos hasta que se inician
+            lista_combinada.append({
+                'id': tid,
+                'nombre': t['nombre'],
+                'tiempo': t.get('tiempo', 5),
+                'rondas': t.get('rondas', 5),
+                'jugadores': len(t.get('jugadores', [])),
+                'tipo': 'suizo'
+            })
     
-    return clasificacion
+    socketio.emit('lista_torneos_actualizada', lista_combinada)
 
 @socketio.on('unirse_torneo')
 def unirse_torneo(data):
@@ -1433,9 +1684,18 @@ def unirse_torneo(data):
         if torneo_id not in colas_torneo:
             colas_torneo[torneo_id] = []
         
-        emit('clasificacion_torneo', obtener_clasificacion_torneo(torneo_id))
-        emit('jugadores_torneo', torneo['jugadores'])
+        # ✅ NUEVO: Enviar clasificación y jugadores a TODOS los del torneo
+        clasificacion = obtener_clasificacion_torneo(torneo_id)
         
+        # Enviar a todos los jugadores conectados del torneo
+        for nick in torneo['jugadores']:
+            sid = usuarios_conectados.get(nick)
+            if sid and sid in sids_activos:
+                emit('clasificacion_torneo', clasificacion, room=sid)
+                emit('jugadores_torneo', torneo['jugadores'], room=sid)
+                print(f"📤 Enviando lista actualizada a {nick}")
+        
+        # Actualizar lista global de torneos
         socketio.emit('lista_torneos_actualizada', obtener_lista_torneos())
     else:
         print(f"❌ Torneo {torneo_id} no encontrado o no activo")
@@ -1446,9 +1706,16 @@ def registrar_sesion_torneo(data):
     sid = request.sid
     
     if nick:
+        # Si el nick ya estaba registrado con otro SID, limpiar el antiguo
+        if nick in usuarios_conectados:
+            old_sid = usuarios_conectados[nick]
+            if old_sid in sids_activos:
+                print(f"🔄 Actualizando SID de {nick}: {old_sid} -> {sid}")
+        
         usuarios_conectados[nick] = sid
-        print(f"✅ {nick} registrado en usuarios_conectados: {sid}")
-        print(f"📊 Total usuarios: {len(usuarios_conectados)} - {usuarios_conectados}")
+        sids_activos[sid] = True
+        print(f"✅ {nick} registrado para torneos: {sid}")
+        print(f"📊 Total usuarios conectados: {len(usuarios_conectados)}")
         
         emit('sesion_registrada', {'nick': nick, 'sid': sid})
 
@@ -1456,45 +1723,73 @@ def registrar_sesion_torneo(data):
 def buscar_partida_torneo(data):
     torneo_id = data.get('torneo_id')
     jugador = data.get('jugador')
+    automatico = data.get('automatico', False)
     
-    print(f"🔍 {jugador} buscando partida en torneo {torneo_id}")
-    print(f"📋 usuarios_conectados: {usuarios_conectados}")
+    print(f"🔍 {jugador} buscando partida en torneo {torneo_id} (automático: {automatico})")
     
     if torneo_id not in colas_torneo:
         colas_torneo[torneo_id] = []
     
+    # Evitar duplicados en la cola
     if jugador in colas_torneo[torneo_id]:
-        print(f"ℹ️ {jugador} ya está buscando partida")
+        print(f"⚠️ {jugador} ya está en la cola")
+        return
+    
+    # Verificar que el jugador está conectado
+    if jugador not in usuarios_conectados:
+        print(f"❌ {jugador} NO está conectado")
+        return
+    
+    # 🆕 NUEVO: Verificar si el jugador ya está en una partida activa
+    sid_jugador = usuarios_conectados.get(jugador)
+    if sid_jugador and sid_jugador in partidas_activas:
+        print(f"️ {jugador} ya está en una partida activa (sala: {partidas_activas[sid_jugador]}). No puede unirse al torneo.")
+        # Avisar al cliente
+        socketio.emit('error_torneo', {
+            'mensaje': 'Ya estás en una partida activa. Termina esa partida antes de buscar en el torneo.'
+        }, room=sid_jugador)
         return
     
     colas_torneo[torneo_id].append(jugador)
+    print(f"➕ {jugador} añadido a la cola. Total: {len(colas_torneo[torneo_id])}")
     
-    if len(colas_torneo[torneo_id]) >= 2:
-        jugador1 = colas_torneo[torneo_id].pop(0)
-        jugador2 = colas_torneo[torneo_id].pop(0)
+    # Obtener puntos del jugador que busca
+    torneo = torneos.get(torneo_id, {})
+    puntos_jugador = torneo.get('puntos', {}).get(jugador, 0)
+    
+    # Buscar rival con puntos similares (diferencia máxima de 2 puntos)
+    rival_encontrado = None
+    for posible_rival in colas_torneo[torneo_id]:
+        if posible_rival == jugador:
+            continue
         
-        if jugador1 == jugador2:
-            print(f"⚠️ Mismo jugador, reencolando")
-            colas_torneo[torneo_id].append(jugador2)
-            return
+        # 🆕 NUEVO: Verificar que el rival tampoco esté en una partida activa
+        sid_rival = usuarios_conectados.get(posible_rival)
+        if sid_rival and sid_rival in partidas_activas:
+            print(f"⚠️ {posible_rival} está en una partida activa, saltando...")
+            continue
         
-        print(f"🎯 Emparejando: {jugador1} vs {jugador2}")
+        puntos_rival = torneo.get('puntos', {}).get(posible_rival, 0)
         
-        sid_jugador1 = None
-        print(f"🔎 Buscando SID para {jugador1}")
-        for sid, nick in usuarios_conectados.items():
-            print(f"   - {nick} (SID: {sid})")
-            if nick == jugador1:
-                sid_jugador1 = sid
-                break
+        # Emparejar si tienen puntos similares (±2)
+        if abs(puntos_jugador - puntos_rival) <= 2:
+            rival_encontrado = posible_rival
+            break
+    
+    if rival_encontrado:
+        jugador1 = colas_torneo[torneo_id].pop(colas_torneo[torneo_id].index(jugador))
+        jugador2 = colas_torneo[torneo_id].pop(colas_torneo[torneo_id].index(rival_encontrado))
         
-        sid_jugador2 = None
-        print(f"🔎 Buscando SID para {jugador2}")
-        for sid, nick in usuarios_conectados.items():
-            print(f"   - {nick} (SID: {sid})")
-            if nick == jugador2:
-                sid_jugador2 = sid
-                break
+        print(f"🎯 Emparejando: {jugador1} ({puntos_jugador}pts) vs {jugador2} ({puntos_rival}pts)")
+        
+        # CONSULTAR ELOs ACTUALIZADOS ANTES DE ENVIAR
+        categoria = obtener_categoria(int(torneo.get('tiempo', 5)))
+        elo_jugador1 = obtener_elo(jugador1, categoria)
+        elo_jugador2 = obtener_elo(jugador2, categoria)
+        print(f"📊 ELOs para emparejamiento: {jugador1}={elo_jugador1}, {jugador2}={elo_jugador2}")
+        
+        sid_jugador1 = usuarios_conectados.get(jugador1)
+        sid_jugador2 = usuarios_conectados.get(jugador2)
         
         sala_id = str(uuid.uuid4())[:8]
         
@@ -1502,6 +1797,22 @@ def buscar_partida_torneo(data):
             color1, color2 = 'white', 'black'
         else:
             color1, color2 = 'black', 'white'
+        
+        tiempo_torneo = int(torneo.get('tiempo', 5))
+        tiempo_inicial_segundos = tiempo_torneo * 60
+        
+        salas[sala_id] = {
+            'blanco': jugador1 if color1 == 'white' else jugador2,
+            'negro': jugador2 if color2 == 'black' else jugador1,
+            'partida_terminada': False,
+            'tiempo': tiempo_torneo,
+            'incremento': 0,
+            'estadisticas_actualizadas': False,
+            'tiempo_restante_blanco': tiempo_inicial_segundos,
+            'tiempo_restante_negro': tiempo_inicial_segundos,
+            'ultimo_movimiento': time.time(),
+            'turno': 'blanco'
+        }
         
         partidas_torneo_activas[sala_id] = {
             'torneo_id': torneo_id,
@@ -1512,34 +1823,62 @@ def buscar_partida_torneo(data):
         }
         
         print(f"🎮 Sala creada: {sala_id}")
-        print(f"📊 SID encontrados: {sid_jugador1}, {sid_jugador2}")
         
+        # ENVIAR ELOs AL TABLERO
         if sid_jugador1:
-            print(f"📤 Enviando a {jugador1} (SID: {sid_jugador1})")
             socketio.emit('partida_torneo_encontrada', {
                 'sala': sala_id,
                 'color': color1,
                 'rival_nick': jugador2,
-                'torneo_id': torneo_id
+                'torneo_id': torneo_id,
+                'mi_elo': elo_jugador1,
+                'rival_elo': elo_jugador2
             }, room=sid_jugador1)
-        else:
-            print(f"❌ No se encontró SID para {jugador1}")
         
         if sid_jugador2:
-            print(f"📤 Enviando a {jugador2} (SID: {sid_jugador2})")
             socketio.emit('partida_torneo_encontrada', {
                 'sala': sala_id,
                 'color': color2,
                 'rival_nick': jugador1,
-                'torneo_id': torneo_id
+                'torneo_id': torneo_id,
+                'mi_elo': elo_jugador2,
+                'rival_elo': elo_jugador1
             }, room=sid_jugador2)
-        else:
-            print(f"❌ No se encontró SID para {jugador2}")
         
-        if sid_jugador1:
-            socketio.emit('puedes_buscar', room=sid_jugador1)
-        if sid_jugador2:
-            socketio.emit('puedes_buscar', room=sid_jugador2)
+        print(f"✅ Partida de torneo enviada con ELOs: {elo_jugador1} vs {elo_jugador2}")
+    else:
+        # No hay rival disponible con puntos similares
+        print(f"⏳ {jugador} ({puntos_jugador}pts) esperando rival libre...")
+        
+        # Si es búsqueda automática, avisar al cliente
+        if automatico:
+            sid_jugador = usuarios_conectados.get(jugador)
+            if sid_jugador:
+                socketio.emit('sin_rival_disponible', room=sid_jugador)
+        
+@socketio.on('obtener_tiempo_restante_torneo')
+def obtener_tiempo_restante_torneo(data):
+    torneo_id = data.get('torneo_id')
+    
+    if torneo_id in torneos:
+        torneo = torneos[torneo_id]
+        hora_inicio = torneo.get('hora_inicio', time.time())
+        duracion = torneo.get('duracion', 1800)
+        
+        tiempo_transcurrido = time.time() - hora_inicio
+        tiempo_restante = max(0, duracion - tiempo_transcurrido)
+        
+        print(f"⏱️ Tiempo restante torneo {torneo_id}: {tiempo_restante:.1f}s")
+        
+        emit('tiempo_restante_torneo', {
+            'tiempo_restante': tiempo_restante,
+            'torneo_id': torneo_id
+        })
+    else:
+        emit('tiempo_restante_torneo', {
+            'tiempo_restante': 0,
+            'torneo_id': torneo_id
+        })
 @socketio.on('unirse_a_rival')
 def unirse_a_rival(data):
     global cola_espera 
@@ -1565,6 +1904,9 @@ def unirse_a_rival(data):
     tiempo = rival['data'].get('tiempo', 5)
     incremento = rival['data'].get('incremento', 0)
     
+    # ✅ AÑADIR ESTA LÍNEA AQUÍ:
+    tiempo_inicial_segundos = tiempo * 60
+    
     # Asignar colores: el que se une toma el color opuesto al que eligió el creador
     color_rival = rival['data'].get('color', 'random')
     if color_rival == 'random':
@@ -1587,7 +1929,6 @@ def unirse_a_rival(data):
     
     nick_blanco = jugador1['nick'] if color_rival_final == 'white' else jugador2['nick']
     nick_negro = jugador1['nick'] if color_rival_final == 'black' else jugador2['nick']
-    
     tiempo_inicial_segundos = tiempo * 60
     salas[sala_id] = {
         'blanco': nick_blanco,
@@ -1596,8 +1937,10 @@ def unirse_a_rival(data):
         'tiempo': tiempo,
         'incremento': incremento,
         'estadisticas_actualizadas': False,
-        'segundos_blanco': tiempo_inicial_segundos,
-        'segundos_negro': tiempo_inicial_segundos
+        'tiempo_restante_blanco': tiempo_inicial_segundos,
+        'tiempo_restante_negro': tiempo_inicial_segundos,
+        'ultimo_movimiento': time.time(),
+        'turno': 'blanco'
     }
     
     join_room(sala_id, sid=jugador1['id'])
@@ -1613,21 +1956,373 @@ def unirse_a_rival(data):
     emit('partida_encontrada', {
         'sala': sala_id, 'color': color_rival_final, 'config': config_rival,
         'rival_nick': nick_mio, 'mi_elo': elo1, 'rival_elo': elo2,
-        'segundos_blanco': tiempo_inicial_segundos,  # 🆕 AÑADIDO
-        'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
+        'segundos_blanco': tiempo_inicial_segundos,
+        'segundos_negro': tiempo_inicial_segundos
     }, room=jugador1['id'])
     
     emit('partida_encontrada', {
         'sala': sala_id, 'color': color_mio_final, 'config': config_mio,
         'rival_nick': nick_rival, 'mi_elo': elo2, 'rival_elo': elo1,
-        'segundos_blanco': tiempo_inicial_segundos,  # 🆕 AÑADIDO
-        'segundos_negro': tiempo_inicial_segundos    # 🆕 AÑADIDO
+        'segundos_blanco': tiempo_inicial_segundos,
+        'segundos_negro': tiempo_inicial_segundos
     }, room=jugador2['id'])
     
     print(f"✅ Partida manual creada: {nick_rival} vs {nick_mio} | Sala: {sala_id}")
-    emitir_cola_espera()
+    emitir_cola_espera()           
+# Iniciar el monitor de tiempos en segundo plano
+threading.Thread(target=monitor_tiempos, daemon=True).start()
+# =====================================================
+# TORNEOS SUIZOS
+# =====================================================
+torneos_suizos = {}  # {torneo_id: {datos}}
+emparejamientos_suizos = {}  # {torneo_id: {ronda: [{j1, j2, ganador, color_j1}]}}
+
+@socketio.on('crear_torneo_suizo')
+def crear_torneo_suizo(data):
+    nombre = data.get('nombre')
+    tiempo = data.get('tiempo', 5)
+    rondas = data.get('rondas', 5)
+    creador = data.get('creador')
+    
+    torneo_id = str(uuid.uuid4())[:8]
+    
+    torneos_suizos[torneo_id] = {
+        'id': torneo_id,
+        'nombre': nombre,
+        'tiempo': tiempo,
+        'rondas': rondas,
+        'ronda_actual': 1,
+        'creador': creador,
+        'jugadores': [creador],
+        'puntos': {creador: 0},
+        'historial_colores': {creador: []},  # Lista de colores por ronda
+        'historial_rivales': {creador: []},   # Para no repetir rivales
+        'activo': True,
+        'creado_en': time.time(),
+        'finalizado': False
+    }
+    
+    emparejamientos_suizos[torneo_id] = {}
+    
+    print(f"🏆 Torneo Suizo creado: {nombre} (ID: {torneo_id}) - {rondas} rondas")
+    
+    # Enviar confirmación al creador
+    socketio.emit('torneo_suizo_creado', {
+        'torneo_id': torneo_id,
+        'nombre': nombre,
+        'rondas': rondas,
+        'tipo': 'suizo'
+    }, room=request.sid)
+    
+    # Actualizar lista global
+    socketio.emit('lista_torneos_actualizada', obtener_lista_torneos_suizos())
+
+def obtener_lista_torneos_suizos():
+    lista = []
+    for tid, t in torneos_suizos.items():
+        if t['activo']:
+            lista.append({
+                'id': tid,
+                'nombre': t['nombre'],
+                'tiempo': t['tiempo'],
+                'rondas': t['rondas'],
+                'jugadores': len(t['jugadores']),
+                'tipo': 'suizo'
+            })
+    return lista
+
+@socketio.on('unirse_torneo_suizo')
+def unirse_torneo_suizo(data):
+    torneo_id = data.get('torneo_id')
+    jugador = data.get('jugador')
+    
+    if torneo_id not in torneos_suizos:
+        print(f"❌ Torneo suizo {torneo_id} no encontrado")
+        return
+    
+    torneo = torneos_suizos[torneo_id]
+    
+    if not torneo['activo']:
+        print(f"⚠️ Torneo suizo {torneo_id} ya no está activo")
+        return
+    
+    if jugador not in torneo['jugadores']:
+        torneo['jugadores'].append(jugador)
+        torneo['puntos'][jugador] = 0
+        torneo['historial_colores'][jugador] = []
+        torneo['historial_rivales'][jugador] = []
+        print(f"✅ {jugador} se unió al torneo suizo {torneo['nombre']}")
+    
+    # Enviar datos actualizados a todos
+        socketio.emit('torneo_suizo_actualizado', {
+        'torneo_id': torneo_id,
+        'jugadores': torneo['jugadores'],
+        'ronda_actual': torneo['ronda_actual'],
+        'rondas_total': torneo['rondas']
+    })  # Sin broadcast=True
+
+@socketio.on('iniciar_torneo_suizo')
+def iniciar_torneo_suizo(data):
+    torneo_id = data.get('torneo_id')
+    
+    if torneo_id not in torneos_suizos:
+        return
+    
+    torneo = torneos_suizos[torneo_id]
+    
+    if len(torneo['jugadores']) < 2:
+        print(f"⚠️ Se necesitan al menos 2 jugadores")
+        return
+    
+    print(f" Iniciando torneo suizo {torneo['nombre']} - Ronda 1")
+    torneo['activo'] = False  # Ya no se pueden unir más
+    
+    # Generar emparejamientos de la ronda 1
+    generar_ronda_suiza(torneo_id)
+
+def generar_ronda_suiza(torneo_id):
+    torneo = torneos_suizos[torneo_id]
+    ronda = torneo['ronda_actual']
+    jugadores = torneo['jugadores']
+    
+    print(f"🔄 Generando emparejamientos para ronda {ronda}")
+    
+    # Ordenar jugadores por puntos (descendente)
+    jugadores_ordenados = sorted(jugadores, key=lambda x: torneo['puntos'][x], reverse=True)
+    
+    emparejamientos = []
+    usados = set()
+    
+    print(f" Jugadores disponibles: {jugadores_ordenados}")
+    
+    # Emparejar jugadores con puntos similares
+    for i, j1 in enumerate(jugadores_ordenados):
+        if j1 in usados:
+            continue
+        
+        rival_encontrado = None
+        # Buscar el siguiente jugador disponible
+        for j2 in jugadores_ordenados[i+1:]:
+            if j2 in usados:
+                continue
+            
+            # Verificar si ya se enfrentaron
+            historial_j1 = torneo['historial_rivales'].get(j1, [])
+            if j2 in historial_j1:
+                print(f"⚠️ {j1} y {j2} ya se enfrentaron, buscando otro rival")
+                continue
+            
+            rival_encontrado = j2
+            break
+        
+        if rival_encontrado:
+            # Asignar colores
+            color_j1 = asignar_color_suizo(torneo, j1, rival_encontrado, ronda)
+            color_j2 = 'negro' if color_j1 == 'blanco' else 'blanco'
+            
+            emparejamientos.append({
+                'jugador1': j1,
+                'jugador2': rival_encontrado,
+                'color1': color_j1,
+                'color2': color_j2,
+                'ganador': None,
+                'ronda': ronda
+            })
+            
+            usados.add(j1)
+            usados.add(rival_encontrado)
+            
+            # Registrar en historial
+            if j1 not in torneo['historial_rivales']:
+                torneo['historial_rivales'][j1] = []
+            if rival_encontrado not in torneo['historial_rivales']:
+                torneo['historial_rivales'][rival_encontrado] = []
+                
+            torneo['historial_rivales'][j1].append(rival_encontrado)
+            torneo['historial_rivales'][rival_encontrado].append(j1)
+            
+            if j1 not in torneo['historial_colores']:
+                torneo['historial_colores'][j1] = []
+            if rival_encontrado not in torneo['historial_colores']:
+                torneo['historial_colores'][rival_encontrado] = []
+                
+            torneo['historial_colores'][j1].append(color_j1)
+            torneo['historial_colores'][rival_encontrado].append(color_j2)
+            
+            print(f"✅ Emparejado: {j1} ({color_j1}) vs {rival_encontrado} ({color_j2})")
+        else:
+            # BYE - El jugador descansa esta ronda
+            torneo['puntos'][j1] += 1
+            print(f"🎁 {j1} tiene BYE en ronda {ronda} (+1 punto)")
+            usados.add(j1)
+    
+    emparejamientos_suizos[torneo_id][ronda] = emparejamientos
+    
+    print(f"✅ Total emparejamientos generados: {len(emparejamientos)}")
+    
+    # Enviar emparejamientos a todos los jugadores
+    for emp in emparejamientos:
+        j1 = emp['jugador1']
+        j2 = emp['jugador2']
+        sid_j1 = usuarios_conectados.get(j1)
+        sid_j2 = usuarios_conectados.get(j2)
+        
+        print(f" Enviando emparejamiento a {j1} y {j2}")
+        
+        if sid_j1:
+            socketio.emit('emparejamiento_suizo', {
+                'torneo_id': torneo_id,
+                'ronda': ronda,
+                'rival': j2,
+                'mi_color': emp['color1'],
+                'sala': None
+            }, room=sid_j1)
+        
+        if sid_j2:
+            socketio.emit('emparejamiento_suizo', {
+                'torneo_id': torneo_id,
+                'ronda': ronda,
+                'rival': j1,
+                'mi_color': emp['color2'],
+                'sala': None
+            }, room=sid_j2)
+
+def asignar_color_suizo(torneo, j1, j2, ronda):
+    """Asigna colores respetando máximo 2 consecutivos del mismo color"""
+    hist_j1 = torneo['historial_colores'].get(j1, [])
+    hist_j2 = torneo['historial_colores'].get(j2, [])
+    
+    # Contar consecutivos
+    def contar_consecutivos(hist):
+        if not hist:
+            return 0
+        count = 1
+        for i in range(len(hist)-1, 0, -1):
+            if hist[i] == hist[i-1]:
+                count += 1
+            else:
+                break
+        return count
+    
+    cons_j1 = contar_consecutivos(hist_j1)
+    cons_j2 = contar_consecutivos(hist_j2)
+    
+    # Si j1 ya tiene 2 del mismo color, forzar el otro
+    if cons_j1 >= 2:
+        return 'negro' if hist_j1[-1] == 'blanco' else 'blanco'
+    
+    # Si j2 ya tiene 2 del mismo color, darle el que necesita
+    if cons_j2 >= 2:
+        color_necesario_j2 = 'negro' if hist_j2[-1] == 'blanco' else 'blanco'
+        return 'negro' if color_necesario_j2 == 'blanco' else 'blanco'
+    
+    # Si no hay conflicto, alternar normalmente
+    if not hist_j1:
+        return 'blanco' if ronda % 2 == 1 else 'negro'
+    
+    return 'negro' if hist_j1[-1] == 'blanco' else 'blanco'
+
+@socketio.on('fin_partida_suizo')
+def fin_partida_suizo(data):
+    torneo_id = data.get('torneo_id')
+    ronda = data.get('ronda')
+    ganador = data.get('ganador')  # 'blanco', 'negro', o 'empate'
+    
+    if torneo_id not in torneos_suizos:
+        return
+    
+    torneo = torneos_suizos[torneo_id]
+    emparejamientos = emparejamientos_suizos[torneo_id].get(ronda, [])
+    
+    # Encontrar el emparejamiento
+    for emp in emparejamientos:
+        if emp['ronda'] == ronda and emp['ganador'] is None:
+            emp['ganador'] = ganador
+            
+            j1 = emp['jugador1']
+            j2 = emp['jugador2']
+            
+            if ganador == 'blanco':
+                torneo['puntos'][j1] += 1
+            elif ganador == 'negro':
+                torneo['puntos'][j2] += 1
+            else:  # empate
+                torneo['puntos'][j1] += 0.5
+                torneo['puntos'][j2] += 0.5
+            
+            print(f"✅ Ronda {ronda}: {j1} vs {j2} - Ganador: {ganador}")
+            break
+    
+    # Verificar si todos los emparejamientos de esta ronda terminaron
+    todos_terminados = all(emp['ganador'] is not None for emp in emparejamientos)
+    
+    if todos_terminados:
+        print(f"🏁 Ronda {ronda} completada")
+        
+        if ronda < torneo['rondas']:
+            # Siguiente ronda
+            torneo['ronda_actual'] = ronda + 1
+            generar_ronda_suiza(torneo_id)
+        else:
+            # Torneo finalizado
+            finalizar_torneo_suizo(torneo_id)
+
+def calcular_buchholz_cut1(torneo, jugador):
+    """Calcula Buchholz Cut 1: suma puntos de rivales menos el menor"""
+    rivales = torneo['historial_rivales'].get(jugador, [])
+    puntos_rivales = [torneo['puntos'].get(r, 0) for r in rivales]
+    
+    if len(puntos_rivales) <= 1:
+        return sum(puntos_rivales)
+    
+    # Eliminar el rival con menos puntos
+    puntos_rivales.remove(min(puntos_rivales))
+    return sum(puntos_rivales)
+
+def finalizar_torneo_suizo(torneo_id):
+    torneo = torneos_suizos[torneo_id]
+    torneo['finalizado'] = True
+    
+    # Calcular clasificación con Buchholz Cut 1
+    clasificacion = []
+    for jugador in torneo['jugadores']:
+        puntos = torneo['puntos'][jugador]
+        buchholz = calcular_buchholz_cut1(torneo, jugador)
+        clasificacion.append({
+            'nick': jugador,
+            'puntos': puntos,
+            'buchholz': buchholz
+        })
+    
+    # Ordenar: primero por puntos, luego por Buchholz
+    clasificacion.sort(key=lambda x: (x['puntos'], x['buchholz']), reverse=True)
+    
+    print(f"🏆 Torneo Suizo {torneo['nombre']} finalizado!")
+    print(f"📊 Clasificación final:")
+    for i, c in enumerate(clasificacion, 1):
+        print(f"   {i}. {c['nick']}: {c['puntos']} pts (Buchholz: {c['buchholz']})")
+    
+    # Enviar resultado final
+    socketio.emit('torneo_suizo_finalizado', {
+        'torneo_id': torneo_id,
+        'clasificacion': clasificacion
+    }, broadcast=True)
 # --- INICIAR SERVIDOR ---
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    # ...
-    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip_local = s.getsockname()[0]
+    except:
+        ip_local = "127.0.0.1"
+    finally:
+        s.close()
+    
+    print("\n ELITECHESS SERVER")
+    print("="*50)
+    print(f"📍 Local:   http://localhost:5000")
+    print(f"🌐 Red:     http://{ip_local}:5000")
+    print(f"📱 Otros PCs: http://{ip_local}:5000")
+    print("="*50)
+    
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
