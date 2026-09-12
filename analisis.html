@@ -307,7 +307,7 @@
     document.getElementById('mejorJugada').innerText = "";
     
     stockfish.postMessage('position fen ' + game.fen());
-    stockfish.postMessage('go movetime 1000');
+    stockfish.postMessage('go depth 12');
     
     setTimeout(() => {
         if (analizando) {
