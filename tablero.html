@@ -539,6 +539,11 @@ const tiempoMinutos = parseInt(localStorage.getItem('tiempoPartida')) || 5;
 const incremento = parseInt(localStorage.getItem('incrementoPartida')) || 0;
 let miElo = localStorage.getItem('miElo') || 1200;
 let rivalElo = localStorage.getItem('rivalElo') || 1200;
+// ✅ LIMPIAR esTorneo si no hay torneo activo (partida normal)
+if (!localStorage.getItem('torneoActual')) {
+    localStorage.removeItem('esTorneo');
+    console.log('🧹 esTorneo limpiado - partida normal detectada');
+}
 
 function actualizarNombresJugadores() {
     var miTexto = miColor === 'white' ? miNick + ' (' + miElo + ') (Blancas)' : miNick + ' (' + miElo + ') (Negras)';
@@ -1213,7 +1218,7 @@ socket.on('tablas_aceptadas', function() {
     console.log('Tablas aceptadas');
     
     partidaFinalizada = true;
-    deshabilitarBotonesPartida();
+    manejarFinalDePartidaUI();
     
     if (intervaloReloj) {
         clearInterval(intervaloReloj);
@@ -1383,8 +1388,17 @@ socket.on('partida_finalizada', function(data) {
     }
    
     setTimeout(function() { alert(mensaje); }, 300);
+	    // ✅ REACTIVAR BOTÓN DE REVANCHA SI NO ES TORNEO
+    if (localStorage.getItem('esTorneo') !== 'true') {
+        var btnRevancha = document.querySelector('.btn-revancha');
+        if (btnRevancha) {
+            btnRevancha.disabled = false;
+            btnRevancha.style.opacity = '1';
+            btnRevancha.style.cursor = 'pointer';
+        }
+    }
     document.getElementById('btnSalir').disabled = false;
-    deshabilitarBotonesPartida();
+    manejarFinalDePartidaUI();
     
     var resultado = '';
     if (data.motivo === 'jaque_mate' || data.motivo === 'abandono' || data.motivo === 'tiempo' || data.motivo === 'desconexion' || data.motivo === 'desconexion_repetida') {
@@ -1718,7 +1732,7 @@ function comprobarFinDePartida() {
         
         socket.emit('fin_partida', { sala: salaId, motivo: 'jaque_mate', ganador: ganador });
         document.getElementById('btnSalir').disabled = false;
-        deshabilitarBotonesPartida();
+        manejarFinalDePartidaUI();
         
         setTimeout(function() { alert('♚ ¡JAQUE MATE! Ganan las ' + ganadorTexto); }, 300);
         return;
@@ -1742,7 +1756,7 @@ function comprobarFinDePartida() {
         
         socket.emit('fin_partida', { sala: salaId, motivo: 'tablas', ganador: 'empate' });
         document.getElementById('btnSalir').disabled = false;
-        deshabilitarBotonesPartida();
+        manejarFinalDePartidaUI();
         
         setTimeout(function() { alert(motivo); }, 300);
         return;
@@ -1907,7 +1921,7 @@ function ofrecerRevancha() {
         socket.emit('fin_partida', { sala: salaId, motivo: 'abandono', ganador: miColor === 'white' ? 'black' : 'white' });
         
         document.getElementById('btnSalir').disabled = false;
-		deshabilitarBotonesPartida();
+		manejarFinalDePartidaUI();
         
         partidaTerminada();
     }
@@ -1986,6 +2000,53 @@ function deshabilitarBotonesPartida() {
     }
     
     console.log('Botones de Tablas y Abandonar deshabilitados');
+}
+// === FUNCIÓN CENTRALIZADA PARA FINALIZAR PARTIDA (ARREGLA BUG DE REVANCHA) ===
+function manejarFinalDePartidaUI() {
+    partidaFinalizada = true;
+    document.getElementById('btnSalir').disabled = false;
+    
+    var btnTablas = document.querySelector('.btn-tablas');
+    var btnAbandonar = document.querySelector('.btn-abandonar');
+    var btnCancelar = document.getElementById('btn-cancelar-partida');
+    
+    if (btnTablas) {
+        btnTablas.disabled = true;
+        btnTablas.style.opacity = '0.4';
+        btnTablas.style.cursor = 'not-allowed';
+    }
+    
+    if (btnAbandonar) {
+        btnAbandonar.disabled = true;
+        btnAbandonar.style.opacity = '0.4';
+        btnAbandonar.style.cursor = 'not-allowed';
+    }
+    
+    if (btnCancelar) {
+        btnCancelar.disabled = true;
+        btnCancelar.style.opacity = '0.4';
+        btnCancelar.style.cursor = 'not-allowed';
+        btnCancelar.style.background = '#555';
+    }
+
+    // ✅ REACTIVAR BOTÓN DE REVANCHA SOLO SI NO ES TORNEO
+    var btnRevancha = document.querySelector('.btn-revancha');
+    if (btnRevancha) {
+        if (localStorage.getItem('esTorneo') === 'true') {
+            btnRevancha.disabled = true;
+            btnRevancha.style.opacity = '0.4';
+            btnRevancha.style.cursor = 'not-allowed';
+        } else {
+            btnRevancha.disabled = false;
+            btnRevancha.style.opacity = '1';
+            btnRevancha.style.cursor = 'pointer';
+        }
+    }
+    
+    if (intervaloReloj) {
+        clearInterval(intervaloReloj);
+        intervaloReloj = null;
+    }
 }
 
 function habilitarBotonesPartida() {
