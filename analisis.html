@@ -2,30 +2,254 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Análisis - FighterChess</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        body { background: #050505; color: white; font-family: Arial, sans-serif; display: flex; justify-content: center; padding: 20px; }
-        .contenedor { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-        .columna-tablero { display: flex; flex-direction: column; align-items: center; }
-        .tablero-area { display: flex; }
-        .barra-eval { width: 30px; height: 400px; background: #333; border-radius: 5px; overflow: hidden; position: relative; }
-        .eval-blanca { background: white; width: 100%; height: 50%; position: absolute; bottom: 0; transition: height 0.5s; }
-        #miTablero { width: 400px; }
-        .panel-control { width: 300px; background: #111; padding: 20px; border-radius: 10px; }
-        input, textarea { width: 100%; padding: 8px; margin-bottom: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
-        button { padding: 10px 15px; background: #d4af37; border: none; cursor: pointer; border-radius: 4px; margin-right: 5px; margin-bottom: 5px; font-weight: bold; }
-        button:hover { background: #e5c158; }
-        .btn-volver { background: #333; color: white; }
-        #resultadoEval { margin-top: 15px; color: #d4af37; font-size: 1.1em; }
-        #mejorJugada { color: #4ade80; font-weight: bold; }
-        h2 { color: #d4af37; }
-        .nav-container { margin-top: 15px; background: #111; padding: 12px; border-radius: 10px; width: 430px; text-align: center; }
-        .nav-container button { padding: 12px 18px; font-size: 1.1em; }
-        #contadorJugadas { margin-top: 10px; color: #d4af37; font-size: 0.95em; }
+        :root {
+            --bg-color: #050505;
+            --panel-bg: #111;
+            --gold: #d4af37;
+            --mostaza: #c4a028;
+            --silver: #c0c0c0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body { 
+            background: var(--bg-color); 
+            color: white; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            padding: 15px;
+            touch-action: manipulation;
+            overscroll-behavior: none;
+        }
+
+        .contenedor { 
+            display: flex; 
+            gap: 25px; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            align-items: flex-start;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .columna-tablero { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+
+        .tablero-area { 
+            display: flex; 
+            align-items: stretch;
+        }
+
+        .barra-eval { 
+            width: 30px; 
+            height: 400px; 
+            background: #333; 
+            border-radius: 5px 0 0 5px; 
+            overflow: hidden; 
+            position: relative; 
+        }
+
+        .eval-blanca { 
+            background: white; 
+            width: 100%; 
+            height: 50%; 
+            position: absolute; 
+            bottom: 0; 
+            transition: height 0.5s; 
+        }
+
+        #miTablero { 
+            width: 400px; 
+            height: 400px;
+        }
+
+        .panel-control { 
+            width: 320px; 
+            background: var(--panel-bg); 
+            padding: 20px; 
+            border-radius: 15px; 
+            border: 1px solid #333;
+        }
+
+        input, textarea { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 12px; 
+            background: #000; 
+            color: white; 
+            border: 1px solid #444; 
+            border-radius: 8px; 
+            box-sizing: border-box; 
+            font-size: 16px; 
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        button { 
+            padding: 12px 15px; 
+            background: var(--mostaza); 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            margin-right: 5px; 
+            margin-bottom: 8px; 
+            font-weight: bold; 
+            font-size: 0.95em;
+            color: black;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        button:hover { 
+            background: #e5c158; 
+        }
+
+        .btn-volver { 
+            background: #333; 
+            color: white; 
+            width: 100%;
+            margin-top: 15px;
+            padding: 14px;
+        }
+        .btn-volver:hover { background: #444; }
+
+        #panel-resultados {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            margin-bottom: 15px;
+            text-align: center;
+            min-height: 90px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #resultadoEval { font-size: 1.3em; color: var(--gold); font-weight: bold; margin-bottom: 5px; }
+        #mejorJugada { color: #4ade80; font-weight: bold; font-size: 1.1em; margin-bottom: 3px; }
+        #profundidadInfo { color: #888; font-size: 0.85em; }
+        
+        h2 { color: var(--gold); margin-bottom: 15px; text-align: center; font-size: 1.3em; }
+        label { display: block; margin-bottom: 5px; font-size: 0.9em; color: var(--silver); }
+
+        .nav-container { 
+            margin-top: 15px; 
+            background: var(--panel-bg); 
+            padding: 10px; 
+            border-radius: 10px; 
+            width: 430px; 
+            text-align: center; 
+            border: 1px solid #333;
+        }
+
+        .nav-container button { 
+            padding: 12px 5px; 
+            font-size: 0.9em; 
+            flex: 1;
+            margin: 0 3px;
+        }
+
+        #contadorJugadas { margin-top: 8px; color: var(--gold); font-size: 0.9em; }
+
         .mate-aviso { color: #ff4444; font-weight: bold; font-size: 1.2em; animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .profundidad { color: #888; font-size: 0.9em; margin-top: 5px; }
+        
+        .motor-lichess { color: #4ade80; }
+        .motor-local { color: #fbbf24; }
+        
+        /* ANOTACIONES EN EL TABLERO */
+        .square-55d63.anotacion-best { box-shadow: inset 0 0 0 4px #00e676 !important; }
+        .square-55d63.anotacion-excellent { box-shadow: inset 0 0 0 4px #69f0ae !important; }
+        .square-55d63.anotacion-good { box-shadow: inset 0 0 0 4px #29b6f6 !important; }
+        .square-55d63.anotacion-inaccuracy { box-shadow: inset 0 0 0 4px #fdd835 !important; }
+        .square-55d63.anotacion-mistake { box-shadow: inset 0 0 0 4px #ff9800 !important; }
+        .square-55d63.anotacion-blunder { box-shadow: inset 0 0 0 4px #f44336 !important; }
+        
+        /* ✅ CASILLA SELECCIONADA (CLICK-TO-MOVE) */
+        .square-55d63.selected {
+            background: rgba(196, 160, 40, 0.6) !important;
+            box-shadow: inset 0 0 0 3px #c4a028 !important;
+        }
+
+        @media (max-width: 900px) {
+            body { padding: 10px; align-items: flex-start; }
+            .contenedor { flex-direction: column; align-items: center; gap: 15px; }
+            
+            .tablero-area { 
+                width: 100%; 
+                max-width: 100vw; 
+                justify-content: center; 
+            }
+            
+            #miTablero { 
+                width: calc(100vw - 45px) !important; 
+                max-width: 500px !important;
+                height: auto !important;
+                aspect-ratio: 1 / 1 !important;
+            }
+            
+            .barra-eval { 
+                width: 25px; 
+                height: calc(100vw - 45px) !important;
+                max-height: 500px !important;
+                border-radius: 5px 0 0 5px;
+            }
+
+            .panel-control { 
+                width: 100%; 
+                max-width: 500px;
+                padding: 15px; 
+            }
+
+            .nav-container { 
+                width: 100%; 
+                max-width: 500px;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+                padding: 8px;
+            }
+
+            .nav-container button { 
+                padding: 12px 2px; 
+                font-size: 0.8em; 
+                margin: 0;
+            }
+
+            #contadorJugadas {
+                grid-column: span 4;
+                margin-top: 5px;
+            }
+            
+            #panel-resultados {
+                padding: 12px;
+                margin-bottom: 15px;
+            }
+            #resultadoEval { font-size: 1.2em; }
+            #mejorJugada { font-size: 1em; }
+        }
     </style>
 </head>
 <body>
@@ -39,8 +263,8 @@
             <div class="nav-container">
                 <button onclick="irAlInicio()">⏮️ Inicio</button>
                 <button onclick="jugadaAnterior()">◀️ Atrás</button>
-                <button onclick="jugadaSiguiente()">▶️ Siguiente</button>
-                <button onclick="irAlFinal()">️ Final</button>
+                <button onclick="jugadaSiguiente()">▶️ Sig.</button>
+                <button onclick="irAlFinal()">⏭️ Final</button>
                 <p id="contadorJugadas">Jugada 0 de 0</p>
             </div>
         </div>
@@ -48,27 +272,29 @@
         <div class="panel-control">
             <h2>🔍 Sala de Análisis</h2>
             
-            <p><strong>Pegar posición (FEN):</strong></p>
+            <div id="panel-resultados">
+                <p id="resultadoEval">Evaluación: Esperando...</p>
+                <p id="mejorJugada"></p>
+                <p id="profundidadInfo"></p>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                <button onclick="iniciarAnalisis()" style="flex:1; background: #4ade80;">▶️ Analizar</button>
+                <button onclick="detenerAnalisis()" style="flex:1; background: #f44336; color: white;">️ Detener</button>
+            </div>
+            
+            <label>Pegar posición (FEN):</label>
             <input type="text" id="fenInput" value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
             
-            <p><strong>O pegar PGN de partida:</strong></p>
-            <textarea id="pgnInput" rows="4" placeholder="1. e4 e5 2. Nf3 Nc6..."></textarea>
+            <label>O pegar PGN de partida:</label>
+            <textarea id="pgnInput" rows="3" placeholder="1. e4 e5 2. Nf3 Nc6..."></textarea>
             
-            <div>
-                <button onclick="cargarFEN()">📋 Cargar FEN</button>
-                <button onclick="cargarPGN()">📄 Cargar PGN</button>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="cargarFEN()" style="flex:1">📋 Cargar FEN</button>
+                <button onclick="cargarPGN()" style="flex:1">📄 Cargar PGN</button>
             </div>
             
-            <div style="margin-top: 15px;">
-                <button onclick="iniciarAnalisis()">▶️ Analizar</button>
-                <button onclick="detenerAnalisis()">⏹️ Detener</button>
-            </div>
-            
-            <p id="resultadoEval">Evaluación: Esperando...</p>
-            <p id="mejorJugada"></p>
-            <p class="profundidad" id="profundidadInfo"></p>
-            
-            <button class="btn-volver" onclick="window.location.href='configuracion.html'">⬅️ Volver</button>
+            <button class="btn-volver" onclick="window.location.href='configuracion.html'">⬅️ Volver a Configuración</button>
         </div>
     </div>
 
@@ -79,18 +305,23 @@
     <script>
         var game = new Chess();
         var board = null;
-        var stockfish = null;
         var analizando = false;
+        var abortController = null;
+        var stockfish = null;
         var stockfishListo = false;
-        var mateDetectado = false;
+        var usandoMotorLocal = false;
         
         var historialCompleto = [];
         var indiceActual = 0;
+        var anotaciones = [];
+        var evaluacionAnterior = null;
+        
+        // ✅ VARIABLES PARA CLICK-TO-MOVE
+        var casillaSeleccionada = null;
 
         function onDragStart(source, piece) {
             if (game.game_over()) return false;
-            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-                (game.turn() === 'b' && piece.search(/^w/) !== -1)) return false;
+            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) || (game.turn() === 'b' && piece.search(/^w/) !== -1)) return false;
         }
 
         function onDrop(source, target) {
@@ -102,7 +333,6 @@
             actualizarContador();
             actualizarFEN();
             
-            // ✅ DETECTAR MATE O TABLAS INMEDIATAMENTE
             if (game.in_checkmate()) {
                 detenerAnalisis();
                 var ganador = game.turn() === 'w' ? 'Negras' : 'Blancas';
@@ -111,12 +341,11 @@
                 document.getElementById('profundidadInfo').innerText = '';
             } else if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
                 detenerAnalisis();
-                document.getElementById('resultadoEval').innerText = '🤝 Tablas';
+                document.getElementById('resultadoEval').innerText = ' Tablas';
                 document.getElementById('mejorJugada').innerText = '';
                 document.getElementById('profundidadInfo').innerText = '';
-            } else if (analizando) {
-                // Reiniciar análisis en la nueva posición
-                setTimeout(iniciarAnalisis, 200);
+            } else {
+                setTimeout(function() { analizarYClasificarJugada(move, source, target); }, 500);
             }
         }
 
@@ -125,286 +354,357 @@
         }
 
         var config = {
-            draggable: true,
-            position: 'start',
-            onDragStart: onDragStart,
-            onDrop: onDrop,
-            onSnapEnd: onSnapEnd,
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-        };
+    draggable: false,  // ✅ Desactivamos drag para usar solo clics
+    position: 'start',
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+};
         
         board = Chessboard('miTablero', config);
 
-        function cargarStockfish() {
+        // ✅ EVENTO CLICK EN CASILLAS PARA CLICK-TO-MOVE
+        $('#miTablero').on('click', '.square-55d63', function() {
+            var casilla = $(this).attr('data-square');
+            
+            if (!casilla) return;
+            
+            var pieza = game.get(casilla);
+            
+            // Si ya hay una casilla seleccionada
+            if (casillaSeleccionada) {
+                // Si hace clic en la misma casilla, deseleccionar
+                if (casillaSeleccionada === casilla) {
+                    $('.square-55d63').removeClass('selected');
+                    casillaSeleccionada = null;
+                    return;
+                }
+                
+                // Intentar mover desde la casilla seleccionada a la nueva
+                var move = game.move({ from: casillaSeleccionada, to: casilla, promotion: 'q' });
+                
+                if (move) {
+                    // Movimiento válido
+                    $('.square-55d63').removeClass('selected');
+                    casillaSeleccionada = null;
+                    board.position(game.fen());
+                    
+                    historialCompleto = game.history({ verbose: true });
+                    indiceActual = historialCompleto.length;
+                    actualizarContador();
+                    actualizarFEN();
+                    
+                    if (game.in_checkmate()) {
+                        detenerAnalisis();
+                        var ganador = game.turn() === 'w' ? 'Negras' : 'Blancas';
+                        document.getElementById('resultadoEval').innerHTML = '<span class="mate-aviso">♚ ¡JAQUE MATE! Ganan ' + ganador + '</span>';
+                        document.getElementById('mejorJugada').innerText = '';
+                        document.getElementById('profundidadInfo').innerText = '';
+                    } else if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
+                        detenerAnalisis();
+                        document.getElementById('resultadoEval').innerText = '🤝 Tablas';
+                        document.getElementById('mejorJugada').innerText = '';
+                        document.getElementById('profundidadInfo').innerText = '';
+                    } else {
+                        setTimeout(function() { analizarYClasificarJugada(move, casillaSeleccionada, casilla); }, 500);
+                    }
+                } else {
+                    // Movimiento inválido
+                    if (pieza && pieza.color === game.turn()) {
+                        // Si hay otra pieza del mismo color, cambiar selección
+                        $('.square-55d63').removeClass('selected');
+                        casillaSeleccionada = casilla;
+                        $(this).addClass('selected');
+                    } else {
+                        // Deseleccionar
+                        $('.square-55d63').removeClass('selected');
+                        casillaSeleccionada = null;
+                    }
+                }
+            } else {
+                // No hay casilla seleccionada, seleccionar esta si tiene pieza del color correcto
+                if (pieza && pieza.color === game.turn()) {
+                    $('.square-55d63').removeClass('selected');
+                    casillaSeleccionada = casilla;
+                    $(this).addClass('selected');
+                }
+            }
+        });
+
+        async function analizarYClasificarJugada(move, source, target) {
+            var evalActual = await obtenerEvaluacion(game.fen());
+            if (evalActual === null) return;
+            
+            var cpLoss = 0;
+            if (evaluacionAnterior !== null) {
+                var evalAnteriorPerspectivaJugador = game.turn() === 'w' ? -evaluacionAnterior : evaluacionAnterior;
+                var evalActualPerspectivaJugador = game.turn() === 'w' ? -evalActual : evalActual;
+                cpLoss = evalAnteriorPerspectivaJugador - evalActualPerspectivaJugador;
+            }
+            
+            var clase = clasificarJugada(cpLoss);
+            anotaciones[indiceActual - 1] = { casilla: target, clase: clase, cpLoss: cpLoss, san: move.san };
+            pintarAnotacion(target, clase);
+            evaluacionAnterior = evalActual;
+            mostrarInfoAnalisis(evalActual, clase, cpLoss);
+        }
+
+        async function obtenerEvaluacion(fen) {
             try {
-                stockfish = new Worker('stockfish.js');
-                
-                stockfish.onmessage = function(event) {
-                    var line = event.data;
-                    
-                    if (line === 'uciok') {
-                        stockfish.postMessage('setoption name Hash value 512');
-                        stockfish.postMessage('setoption name MultiPV value 1');
-                        stockfish.postMessage('isready');
-                        return;
-                    }
-                    
-                    if (line === 'readyok') {
-                        stockfishListo = true;
-                        console.log('✅ Stockfish listo');
-                        document.getElementById('resultadoEval').innerText = 'Motor listo. Dale a Analizar.';
-                        return;
-                    }
-                    
-                    if (!analizando) return;
-                    
-                    // ✅ DETECTAR MATE FORZADO (Stockfish lo ve antes que el tablero)
-                    if (line.includes('mate')) {
-                        var mateMatch = line.match(/mate (-?\d+)/);
-                        if (mateMatch) {
-                            var movimientosMate = parseInt(mateMatch[1]);
-                            detenerAnalisis();
-                            mateDetectado = true;
-                            
-                            if (movimientosMate > 0) {
-                                document.getElementById('resultadoEval').innerHTML = 
-                                    '<span class="mate-aviso"> Mate en ' + movimientosMate + ' (Blancas)</span>';
-                            } else {
-                                document.getElementById('resultadoEval').innerHTML = 
-                                    '<span class="mate-aviso">♚ Mate en ' + Math.abs(movimientosMate) + ' (Negras)</span>';
-                            }
-                            document.getElementById('mejorJugada').innerText = '';
-                            document.getElementById('profundidadInfo').innerText = 'Mate detectado por Stockfish';
-                            return;
-                        }
-                    }
-                    
-                                        // ✅ EVALUACIÓN NORMAL (centipawns)
-                    if (line.startsWith('info') && line.includes('score cp')) {
-                        var match = line.match(/score cp (-?\d+)/);
-                        if (match) {
-                            var score = parseInt(match[1]);
-                            
-                            // ⚠️ NO INVERTIR: Stockfish siempre da desde perspectiva de blancas
-                            // + = ventaja blancas, - = ventaja negras (siempre)
-                            
-                            // Actualizar barra de evaluación
-                            var evalPct = 50 + (score / 10);
-                            evalPct = Math.max(5, Math.min(95, evalPct));
-                            document.getElementById('barraBlanca').style.height = evalPct + '%';
-                            
-                            // Mostrar evaluación con signo
-                            var signo = score >= 0 ? '+' : '';
-                            var evalTexto = signo + (score / 100).toFixed(2);
-                            document.getElementById('resultadoEval').innerText = 'Evaluación: ' + evalTexto;
-                        }
-                    }
-                    
-                    // ✅ MEJOR JUGADA (solo la línea principal, multipv 1)
-                    if (line.startsWith('info') && line.includes('multipv 1') && line.includes(' pv ')) {
-                        var pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
-                        if (pvMatch) {
-                            document.getElementById('mejorJugada').innerText = 'Mejor jugada: ' + pvMatch[1];
-                        }
-                    }
-                    
-                    // ✅ MOSTRAR PROFUNDIDAD ACTUAL
-                    if (line.startsWith('info') && line.includes('depth')) {
-                        var depthMatch = line.match(/depth (\d+)/);
-                        if (depthMatch) {
-                            document.getElementById('profundidadInfo').innerText = 'Profundidad: ' + depthMatch[1];
-                        }
-                    }
-                };
-                
-                stockfish.postMessage('uci');
-                console.log('🔄 Cargando Stockfish...');
+                var response = await fetch('https://lichess.org/api/cloud-eval?fen=' + encodeURIComponent(fen) + '&multiPv=1');
+                if (response.status === 404) return await obtenerEvaluacionLocal(fen);
+                if (!response.ok) return null;
+                var data = await response.json();
+                if (data.pvs && data.pvs.length > 0) return data.pvs[0].cp || 0;
+                return null;
             } catch (e) {
-                console.error('❌ Error al cargar Stockfish:', e);
-                document.getElementById('resultadoEval').innerText = '❌ Error: stockfish.js no encontrado';
+                return await obtenerEvaluacionLocal(fen);
             }
         }
 
-        function actualizarFEN() {
-            document.getElementById('fenInput').value = game.fen();
+        async function obtenerEvaluacionLocal(fen) {
+            return new Promise(function(resolve) {
+                if (!stockfish) {
+                    cargarStockfishLocal().then(function() { resolve(calcularConStockfish(fen)); });
+                } else {
+                    resolve(calcularConStockfish(fen));
+                }
+            });
         }
 
-        function actualizarContador() {
-            var total = historialCompleto.length;
-            document.getElementById('contadorJugadas').innerText = 'Jugada ' + indiceActual + ' de ' + total;
+        function cargarStockfishLocal() {
+            return new Promise(function(resolve) {
+                stockfish = new Worker('stockfish.js');
+                stockfish.onmessage = function(event) {
+                    var line = event.data;
+                    if (line === 'uciok') {
+                        stockfish.postMessage('setoption name Hash value 512');
+                        stockfish.postMessage('isready');
+                    }
+                    if (line === 'readyok') {
+                        stockfishListo = true;
+                        resolve();
+                    }
+                };
+                stockfish.postMessage('uci');
+            });
         }
+
+        function calcularConStockfish(fen) {
+            return new Promise(function(resolve) {
+                var resultado = null;
+                var timeout = setTimeout(function() { resolve(resultado); }, 3000);
+                stockfish.onmessage = function(event) {
+                    var line = event.data;
+                    if (line.startsWith('info') && line.includes('score cp') && line.includes('depth 10')) {
+                        var match = line.match(/score cp (-?\d+)/);
+                        if (match) {
+                            resultado = parseInt(match[1]);
+                            clearTimeout(timeout);
+                            resolve(resultado);
+                        }
+                    }
+                };
+                stockfish.postMessage('position fen ' + fen);
+                stockfish.postMessage('go depth 10');
+            });
+        }
+
+        function clasificarJugada(cpLoss) {
+            if (cpLoss <= 10) return 'best';
+            if (cpLoss <= 25) return 'excellent';
+            if (cpLoss <= 50) return 'good';
+            if (cpLoss <= 100) return 'inaccuracy';
+            if (cpLoss <= 300) return 'mistake';
+            return 'blunder';
+        }
+
+        function pintarAnotacion(casilla, clase) {
+            $('.square-55d63').removeClass('anotacion-best anotacion-excellent anotacion-good anotacion-inaccuracy anotacion-mistake anotacion-blunder');
+            if (casilla) $('#miTablero .square-' + casilla).addClass('anotacion-' + clase);
+        }
+
+        function mostrarInfoAnalisis(eval, clase, cpLoss) {
+            var signo = eval >= 0 ? '+' : '';
+            document.getElementById('resultadoEval').innerText = 'Evaluación: ' + signo + (eval / 100).toFixed(2);
+            var nombresClase = { 'best': '✅ Mejor jugada', 'excellent': '⚡ Excelente', 'good': '👍 Buena', 'inaccuracy': '⚠️ Inexactitud', 'mistake': '❌ Error', 'blunder': '💀 Fallo garrafal' };
+            document.getElementById('mejorJugada').innerText = nombresClase[clase] + ' (pérdida: ' + cpLoss + ' cp)';
+        }
+
+        function cargarStockfishLocalCompleto() {
+            if (stockfish) return Promise.resolve();
+            return new Promise(function(resolve, reject) {
+                try {
+                    stockfish = new Worker('stockfish.js');
+                    stockfish.onmessage = function(event) {
+                        var line = event.data;
+                        if (line === 'uciok') {
+                            stockfish.postMessage('setoption name Hash value 512');
+                            stockfish.postMessage('setoption name MultiPV value 1');
+                            stockfish.postMessage('isready');
+                        }
+                        if (line === 'readyok') { stockfishListo = true; resolve(); }
+                    };
+                    stockfish.postMessage('uci');
+                } catch (e) { reject(e); }
+            });
+        }
+
+        async function iniciarAnalisis() {
+            if (game.in_checkmate()) {
+                var ganador = game.turn() === 'w' ? 'Negras' : 'Blancas';
+                document.getElementById('resultadoEval').innerHTML = '<span class="mate-aviso"> ¡JAQUE MATE! Ganan ' + ganador + '</span>';
+                return;
+            }
+            if (game.in_draw() || game.in_stalemate()) {
+                document.getElementById('resultadoEval').innerText = '🤝 Tablas';
+                return;
+            }
+            
+            detenerAnalisis();
+            analizando = true;
+            abortController = new AbortController();
+            document.getElementById('mejorJugada').innerText = 'Calculando...';
+            document.getElementById('resultadoEval').innerText = '⏳ Analizando...';
+            document.getElementById('profundidadInfo').innerHTML = '<span class="motor-lichess">Motor: Stockfish 16 NNUE (Lichess)</span>';
+            
+            var fen = game.fen();
+            try {
+                var response = await fetch('https://lichess.org/api/cloud-eval?fen=' + encodeURIComponent(fen) + '&multiPv=1', { signal: abortController.signal });
+                if (response.status === 404) {
+                    document.getElementById('profundidadInfo').innerText = ' Cargando motor local...';
+                    await cargarStockfishLocalCompleto();
+                    usandoMotorLocal = true;
+                    if (stockfishListo && analizando) {
+                        stockfish.postMessage('stop');
+                        stockfish.postMessage('position fen ' + fen);
+                        stockfish.postMessage('go depth 15');
+                        stockfish.onmessage = function(event) {
+                            var line = event.data;
+                            if (line.includes('mate')) {
+                                var mateMatch = line.match(/mate (-?\d+)/);
+                                if (mateMatch) {
+                                    detenerAnalisis();
+                                    document.getElementById('resultadoEval').innerHTML = '<span class="mate-aviso">♚ Mate en ' + Math.abs(parseInt(mateMatch[1])) + '</span>';
+                                    return;
+                                }
+                            }
+                            if (line.startsWith('info') && line.includes('score cp')) {
+                                var match = line.match(/score cp (-?\d+)/);
+                                if (match) {
+                                    var score = parseInt(match[1]);
+                                    if (game.turn() === 'b') score = -score;
+                                    var evalPct = 50 + (score / 10);
+                                    evalPct = Math.max(5, Math.min(95, evalPct));
+                                    document.getElementById('barraBlanca').style.height = evalPct + '%';
+                                    var signo = score >= 0 ? '+' : '';
+                                    document.getElementById('resultadoEval').innerText = 'Evaluación: ' + signo + (score / 100).toFixed(2);
+                                }
+                            }
+                            if (line.startsWith('info') && line.includes('multipv 1') && line.includes(' pv ')) {
+                                var pvMatch = line.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
+                                if (pvMatch) document.getElementById('mejorJugada').innerText = 'Mejor jugada: ' + pvMatch[1];
+                            }
+                        };
+                    }
+                    return;
+                }
+                if (!response.ok) { document.getElementById('resultadoEval').innerText = '❌ Error de conexión'; return; }
+                
+                var data = await response.json();
+                if (!analizando) return;
+                if (data.pvs && data.pvs.length > 0) {
+                    var pv = data.pvs[0];
+                    var score = pv.cp;
+                    var moves = pv.moves || '';
+                    var evalPct = 50 + (score / 10);
+                    evalPct = Math.max(5, Math.min(95, evalPct));
+                    document.getElementById('barraBlanca').style.height = evalPct + '%';
+                    var signo = score >= 0 ? '+' : '';
+                    document.getElementById('resultadoEval').innerText = 'Evaluación: ' + signo + (score / 100).toFixed(2);
+                    if (moves) document.getElementById('mejorJugada').innerText = 'Mejor jugada: ' + moves.split(' ')[0];
+                    if (data.depth) document.getElementById('profundidadInfo').innerHTML = '<span class="motor-lichess">Motor: Stockfish 16 NNUE (Lichess) | Profundidad: ' + data.depth + '</span>';
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') document.getElementById('resultadoEval').innerText = '❌ Error: ' + error.message;
+            }
+            analizando = false;
+        }
+
+        function detenerAnalisis() {
+            analizando = false;
+            usandoMotorLocal = false;
+            if (abortController) { abortController.abort(); abortController = null; }
+            if (stockfish) stockfish.postMessage('stop');
+        }
+
+        function actualizarFEN() { document.getElementById('fenInput').value = game.fen(); }
+        function actualizarContador() { document.getElementById('contadorJugadas').innerText = 'Jugada ' + indiceActual + ' de ' + historialCompleto.length; }
 
         function irAlInicio() {
-            game.reset();
-            board.position('start');
-            indiceActual = 0;
-            actualizarFEN();
-            actualizarContador();
-            detenerAnalisis();
-            mateDetectado = false;
-            document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
-            document.getElementById('mejorJugada').innerText = '';
-            document.getElementById('profundidadInfo').innerText = '';
+            game.reset(); board.position('start'); indiceActual = 0; actualizarFEN(); actualizarContador(); detenerAnalisis(); limpiarAnotacionesTablero();
+            document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...'; document.getElementById('mejorJugada').innerText = ''; document.getElementById('profundidadInfo').innerText = ''; evaluacionAnterior = null;
+            $('.square-55d63').removeClass('selected');
+            casillaSeleccionada = null;
         }
 
         function jugadaAnterior() {
             if (indiceActual > 0 && historialCompleto.length > 0) {
                 game.reset();
-                for (var i = 0; i < indiceActual - 1; i++) {
-                    game.move(historialCompleto[i]);
-                }
-                board.position(game.fen());
-                indiceActual--;
-                actualizarFEN();
-                actualizarContador();
-                detenerAnalisis();
-                mateDetectado = false;
-                document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
-                document.getElementById('mejorJugada').innerText = '';
-                document.getElementById('profundidadInfo').innerText = '';
+                for (var i = 0; i < indiceActual - 1; i++) game.move(historialCompleto[i]);
+                board.position(game.fen()); indiceActual--; actualizarFEN(); actualizarContador(); detenerAnalisis(); limpiarAnotacionesTablero();
+                if (anotaciones[indiceActual - 1]) pintarAnotacion(anotaciones[indiceActual - 1].casilla, anotaciones[indiceActual - 1].clase);
+                document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...'; document.getElementById('mejorJugada').innerText = ''; document.getElementById('profundidadInfo').innerText = '';
+                $('.square-55d63').removeClass('selected');
+                casillaSeleccionada = null;
             }
         }
 
         function jugadaSiguiente() {
             if (indiceActual < historialCompleto.length) {
-                game.move(historialCompleto[indiceActual]);
-                indiceActual++;
-                board.position(game.fen());
-                actualizarFEN();
-                actualizarContador();
-                detenerAnalisis();
-                mateDetectado = false;
-                document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
-                document.getElementById('mejorJugada').innerText = '';
-                document.getElementById('profundidadInfo').innerText = '';
+                game.move(historialCompleto[indiceActual]); indiceActual++; board.position(game.fen()); actualizarFEN(); actualizarContador(); detenerAnalisis(); limpiarAnotacionesTablero();
+                if (anotaciones[indiceActual - 1]) { pintarAnotacion(anotaciones[indiceActual - 1].casilla, anotaciones[indiceActual - 1].clase); mostrarInfoAnalisis(0, anotaciones[indiceActual - 1].clase, anotaciones[indiceActual - 1].cpLoss); }
+                $('.square-55d63').removeClass('selected');
+                casillaSeleccionada = null;
             }
         }
 
         function irAlFinal() {
             game.reset();
-            for (var i = 0; i < historialCompleto.length; i++) {
-                game.move(historialCompleto[i]);
-            }
-            board.position(game.fen());
-            indiceActual = historialCompleto.length;
-            actualizarFEN();
-            actualizarContador();
-            detenerAnalisis();
-            mateDetectado = false;
-            document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
-            document.getElementById('mejorJugada').innerText = '';
-            document.getElementById('profundidadInfo').innerText = '';
+            for (var i = 0; i < historialCompleto.length; i++) game.move(historialCompleto[i]);
+            board.position(game.fen()); indiceActual = historialCompleto.length; actualizarFEN(); actualizarContador(); detenerAnalisis(); limpiarAnotacionesTablero(); mostrarTodasAnotaciones();
+            $('.square-55d63').removeClass('selected');
+            casillaSeleccionada = null;
         }
+
+        function limpiarAnotacionesTablero() { $('.square-55d63').removeClass('anotacion-best anotacion-excellent anotacion-good anotacion-inaccuracy anotacion-mistake anotacion-blunder'); }
+        function mostrarTodasAnotaciones() { anotaciones.forEach(function(ant) { if (ant && ant.casilla) $('#miTablero .square-' + ant.casilla).addClass('anotacion-' + ant.clase); }); }
 
         function cargarFEN() {
             var fen = document.getElementById('fenInput').value.trim();
-            if (!fen) {
-                alert('❌ El campo FEN está vacío');
-                return;
-            }
+            if (!fen) { alert('❌ El campo FEN está vacío'); return; }
             try {
-                game.load(fen);
-                board.position(fen);
-                actualizarFEN();
-                historialCompleto = [];
-                indiceActual = 0;
-                actualizarContador();
-                detenerAnalisis();
-                mateDetectado = false;
-                document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
-                document.getElementById('mejorJugada').innerText = '';
-                document.getElementById('profundidadInfo').innerText = '';
-            } catch (e) {
-                alert('❌ FEN no válido');
-            }
+                game.load(fen); board.position(fen); actualizarFEN(); historialCompleto = []; indiceActual = 0; anotaciones = []; actualizarContador(); detenerAnalisis(); limpiarAnotacionesTablero();
+                document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...'; document.getElementById('mejorJugada').innerText = ''; document.getElementById('profundidadInfo').innerText = ''; evaluacionAnterior = null;
+                $('.square-55d63').removeClass('selected');
+                casillaSeleccionada = null;
+            } catch (e) { alert('❌ FEN no válido'); }
         }
 
         function cargarPGN() {
             var pgn = document.getElementById('pgnInput').value.trim();
-            if (!pgn) {
-                alert('❌ El campo PGN está vacío');
-                return;
-            }
+            if (!pgn) { alert(' El campo PGN está vacío'); return; }
             try {
                 var tempGame = new Chess();
                 var loaded = tempGame.load_pgn(pgn);
-                
                 if (loaded) {
-                    historialCompleto = tempGame.history({ verbose: true });
-                    game.reset();
-                    board.position('start');
-                    indiceActual = 0;
-                    actualizarFEN();
-                    actualizarContador();
-                    detenerAnalisis();
-                    mateDetectado = false;
-                    document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando...';
-                    document.getElementById('mejorJugada').innerText = '';
-                    document.getElementById('profundidadInfo').innerText = '';
-                } else {
-                    alert('❌ No se pudo cargar el PGN. Revisa el formato.');
-                }
-            } catch (e) {
-                alert('❌ Error al cargar PGN: ' + e.message);
-            }
+                    historialCompleto = tempGame.history({ verbose: true }); game.reset(); board.position('start'); indiceActual = 0; anotaciones = []; actualizarFEN(); actualizarContador(); detenerAnalisis(); limpiarAnotacionesTablero();
+                    document.getElementById('resultadoEval').innerText = 'Evaluación: Esperando... (mueve piezas)'; document.getElementById('mejorJugada').innerText = ''; document.getElementById('profundidadInfo').innerText = ''; evaluacionAnterior = null;
+                    $('.square-55d63').removeClass('selected');
+                    casillaSeleccionada = null;
+                } else { alert('❌ No se pudo cargar el PGN.'); }
+            } catch (e) { alert('❌ Error al cargar PGN: ' + e.message); }
         }
 
-        function iniciarAnalisis() {
-            // ✅ VERIFICAR SI YA HAY MATE O TABLAS
-            if (game.in_checkmate()) {
-                var ganador = game.turn() === 'w' ? 'Negras' : 'Blancas';
-                document.getElementById('resultadoEval').innerHTML = '<span class="mate-aviso">♚ ¡JAQUE MATE! Ganan ' + ganador + '</span>';
-                document.getElementById('mejorJugada').innerText = '';
-                document.getElementById('profundidadInfo').innerText = '';
-                return;
-            }
-            
-            if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
-                document.getElementById('resultadoEval').innerText = '🤝 Tablas';
-                document.getElementById('mejorJugada').innerText = '';
-                document.getElementById('profundidadInfo').innerText = '';
-                return;
-            }
-            
-            if (mateDetectado) {
-                return; // Ya detectamos mate, no seguir analizando
-            }
-            
-            if (!stockfish) {
-                cargarStockfish();
-                setTimeout(iniciarAnalisis, 1000);
-                return;
-            }
-            
-            if (!stockfishListo) {
-                document.getElementById('resultadoEval').innerText = "⏳ Cargando motor...";
-                setTimeout(iniciarAnalisis, 500);
-                return;
-            }
-            
-            // Detener análisis anterior y empezar nuevo
-            stockfish.postMessage('stop');
-            analizando = true;
-            document.getElementById('mejorJugada').innerText = "Calculando...";
-            document.getElementById('resultadoEval').innerText = " Analizando...";
-            document.getElementById('profundidadInfo').innerText = '';
-            
-            // ✅ SIN TIMEOUT: Calcular hasta que Stockfish encuentre mate o el usuario pare
-            stockfish.postMessage('position fen ' + game.fen());
-            stockfish.postMessage('go infinite');
-        }
-
-        function detenerAnalisis() {
-            analizando = false;
-            if (stockfish) {
-                stockfish.postMessage('stop');
-            }
-        }
-
-        window.onload = function() {
-            cargarStockfish();
-            actualizarContador();
-        };
+        window.onload = function() { actualizarContador(); };
     </script>
 </body>
 </html>
