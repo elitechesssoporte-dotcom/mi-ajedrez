@@ -5,4 +5,4 @@
  python-engineio==4.10.1
  eventlet==0.36.1
  gunicorn==23.0.0
-
+ python-chess==1.11.2
