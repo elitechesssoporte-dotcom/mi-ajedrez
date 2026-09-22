@@ -32,6 +32,7 @@ partidas_activas = {}
 temporizadores_reconexion = {}
 sids_activos = {}
 desconexiones_por_jugador = {}
+temporizadores_bot = {}  # 🤖 Para controlar el tiempo de espera del bot
 
 def emitir_cola_espera():
     print(f"📡 Emitiendo cola - Total en espera: {len(cola_espera)}")
@@ -780,6 +781,167 @@ def eliminar_cuenta(data):
     except Exception as e:
         print(f"❌ Error al eliminar cuenta: {e}")
         emit('eliminar_response', {'success': False, 'message': 'Error al eliminar cuenta'})
+        # ==========================================
+# 🤖 SISTEMA DE BOT PARA PARTIDAS NORMALES
+# ==========================================
+class BotAjedrez:
+    def __init__(self, nivel='medio'):
+        self.nivel = nivel
+        self.board = chess.Board()
+        
+    def obtener_movimiento(self, fen):
+        try:
+            self.board.set_fen(fen)
+            movimientos = list(self.board.legal_moves)
+            if not movimientos:
+                return None
+            if self.nivel == 'facil':
+                return random.choice(movimientos)
+            elif self.nivel == 'medio':
+                # Prioriza capturas y jaques
+                for move in movimientos:
+                    if self.board.is_capture(move) or self.board.gives_check(move):
+                        return move
+                return random.choice(movimientos)
+            else:
+                return random.choice(movimientos)
+        except Exception as e:
+            print(f"❌ Error en bot: {e}")
+            return None
+
+def activar_bot_contra_jugador(jugador_id, data):
+    with app.app_context():
+        print(f" Activando bot para {jugador_id}...")
+        if data.get('esTorneo') == 'true':
+            print("⚠️ No activar bot: es torneo")
+            return
+        
+        sala_id = str(uuid.uuid4())
+        nick_jugador = data.get('usuario', 'Anónimo')
+        nick_bot = f"🤖 FighterBot"
+        
+        color_jugador = data.get('color', 'random')
+        if color_jugador == 'random':
+            color_jugador = 'white' if random.random() < 0.5 else 'black'
+        
+        color_bot = 'black' if color_jugador == 'white' else 'white'
+        nick_blanco = nick_jugador if color_jugador == 'white' else nick_bot
+        nick_negro = nick_bot if color_jugador == 'white' else nick_jugador
+        
+        tiempo_inicial = data.get('tiempo', 5) * 60
+        salas[sala_id] = {
+            'blanco': nick_blanco, 'negro': nick_negro, 'partida_terminada': False,
+            'tiempo': data.get('tiempo', 5), 'incremento': data.get('incremento', 0),
+            'estadisticas_actualizadas': False, 'tiempo_restante_blanco': tiempo_inicial,
+            'tiempo_restante_negro': tiempo_inicial, 'ultimo_movimiento': time.time(),
+            'turno': 'blanco', 'es_bot': True, 'bot_color': color_bot
+        }
+        
+        # ✅ NO USAR join_room - Guardamos solo en partidas_activas
+        partidas_activas[jugador_id] = sala_id
+        
+        categoria = obtener_categoria(data.get('tiempo', 5))
+        elo_jugador = obtener_elo(nick_jugador, categoria)
+        
+        # ✅ Emitir directamente al jugador (sin join_room)
+        socketio.emit('partida_encontrada', {
+            'sala': sala_id, 'color': color_jugador, 'config': data,
+            'rival_nick': nick_bot, 'mi_elo': elo_jugador, 'rival_elo': 1200,
+            'segundos_blanco': tiempo_inicial, 'segundos_negro': tiempo_inicial,
+            'es_bot': True
+        }, room=jugador_id)
+        
+        print(f"✅ Bot activado: {nick_jugador} vs {nick_bot} | Sala: {sala_id}")
+        
+        # Iniciar el bot en otro hilo
+        threading.Thread(target=jugar_bot, args=(sala_id, color_bot, jugador_id), daemon=True).start()
+
+def jugar_bot(sala_id, color_bot, jugador_id):
+    time.sleep(2)
+    bot = BotAjedrez(nivel='medio')
+    
+    while sala_id in salas and not salas[sala_id].get('partida_terminada', False):
+        sala = salas[sala_id]
+        turno_bot = (color_bot == 'white' and sala.get('turno') == 'blanco') or \
+                    (color_bot == 'black' and sala.get('turno') == 'negro')
+        
+        if turno_bot:
+            # 1. Obtener el FEN más reciente del servidor
+            fen_actual = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+            if sala_id in estado_partidas:
+                fen_actual = estado_partidas[sala_id].get('fen', fen_actual)
+            
+            print(f"🔍 DEBUG BOT - Sala: {sala_id} | Color Bot: {color_bot.upper()} | Turno Sala: {sala.get('turno')}")
+            print(f"🔍 DEBUG BOT - FEN que lee el bot: {fen_actual}")
+            
+            try:
+                bot.board.set_fen(fen_actual)
+            except Exception as e:
+                print(f"❌ Error al cargar FEN en el bot: {e}. Reiniciando tablero.")
+                bot.board.reset()
+            
+            # 2. Verificación de seguridad: ¿El tablero del bot coincide con su color?
+            es_turno_bot_en_tablero = (color_bot == 'white' and bot.board.turn == chess.WHITE) or \
+                                      (color_bot == 'black' and bot.board.turn == chess.BLACK)
+            
+            if not es_turno_bot_en_tablero:
+                print(f"⚠️ ADVERTENCIA: El FEN dice que es turno de {'Blancas' if bot.board.turn == chess.WHITE else 'Negras'}, pero el bot es {color_bot.upper()}. Esperando sincronización...")
+                time.sleep(1)
+                continue
+
+            # 3. Obtener movimiento
+            movimiento = bot.obtener_movimiento(fen_actual)
+            if movimiento:
+                san = bot.board.san(movimiento)
+                print(f"🤖 El bot (como {color_bot.upper()}) elige jugar: {san}")
+                
+                bot.board.push(movimiento)
+                fen_nuevo = bot.board.fen()
+                
+                ahora = time.time()
+                tiempo_transcurrido = ahora - sala['ultimo_movimiento']
+                incremento = float(sala.get('incremento', 0))
+                
+                if sala['turno'] == 'blanco':
+                    sala['tiempo_restante_blanco'] = max(0, sala['tiempo_restante_blanco'] - tiempo_transcurrido) + incremento
+                    sala['turno'] = 'negro'
+                else:
+                    sala['tiempo_restante_negro'] = max(0, sala['tiempo_restante_negro'] - tiempo_transcurrido) + incremento
+                    sala['turno'] = 'blanco'
+                sala['ultimo_movimiento'] = time.time()
+                
+                if sala_id not in estado_partidas:
+                    estado_partidas[sala_id] = {'fen': 'start', 'movimientos': []}
+                estado_partidas[sala_id]['fen'] = fen_nuevo
+                
+                promo_map = {
+                    chess.QUEEN: 'q', chess.ROOK: 'r',
+                    chess.BISHOP: 'b', chess.KNIGHT: 'n'
+                }
+                promo_str = promo_map.get(movimiento.promotion, 'q') if movimiento.promotion else None
+                
+                estado_partidas[sala_id]['movimientos'].append({
+                    'from': chess.square_name(movimiento.from_square),
+                    'to': chess.square_name(movimiento.to_square),
+                    'promotion': promo_str
+                })
+                
+                with app.app_context():
+                    socketio.emit('recibir_movimiento', {
+                        'movimiento': {
+                            'from': chess.square_name(movimiento.from_square),
+                            'to': chess.square_name(movimiento.to_square),
+                            'promotion': promo_str
+                        }
+                    }, room=sala_id)
+                
+                print(f"✅ Movimiento del bot enviado: {san}")
+                
+                if bot.board.is_game_over():
+                    salas[sala_id]['partida_terminada'] = True
+                    print(f"🏁 Partida contra bot finalizada en {sala_id}")
+                    break
+        time.sleep(1)
 
 @socketio.on('buscar_partida')
 def buscar_partida(data):
@@ -843,6 +1005,10 @@ def buscar_partida(data):
             
             # --- AQUÍ SE CREA LA SALA Y sala_id ---
             cola_espera.pop(i)
+                        # 🤖 Cancelar temporizador del bot si encuentra rival humano
+            if jugador_id in temporizadores_bot:
+                temporizadores_bot[jugador_id].cancel()
+                del temporizadores_bot[jugador_id]
             sala_id = str(uuid.uuid4())
             
             jugador1 = {
@@ -910,11 +1076,25 @@ def buscar_partida(data):
         
         # Si el bucle termina sin encontrar rival (ej: todos tienen el mismo color)
         cola_espera.append({'id': jugador_id, 'data': data})
+                # 🤖 Programar activación del bot si es partida normal (15 segundos)
+        if data.get('esTorneo') != 'true':
+            timer = threading.Timer(15, activar_bot_contra_jugador, args=(jugador_id, data))
+            timer.daemon = True
+            timer.start()
+            temporizadores_bot[jugador_id] = timer
+            print(f"⏰ Temporizador bot iniciado para {usuario} (15s)")
         emit('esperando_rival', {'mensaje': f'Esperando rival que elija {data.get("tiempo", 5)} minutos...'})
         print(f"⏳ Jugador {usuario} en cola esperando rival con {data.get('tiempo', 5)} min")
         emitir_cola_espera()
     else:
         cola_espera.append({'id': jugador_id, 'data': data})
+                # 🤖 Programar activación del bot si es partida normal (15 segundos)
+        if data.get('esTorneo') != 'true':
+            timer = threading.Timer(15, activar_bot_contra_jugador, args=(jugador_id, data))
+            timer.daemon = True
+            timer.start()
+            temporizadores_bot[jugador_id] = timer
+            print(f"⏰ Temporizador bot iniciado para {usuario} (15s)")
         emit('esperando_rival', {'mensaje': 'Esperando a que se conecte un rival...'})
         print(f"⏳ Jugador {usuario} en cola de espera")
         emitir_cola_espera()
@@ -948,8 +1128,10 @@ def reunirse_a_sala(data):
             
             if salas[sala_id].get('desconectado') == nick:
                 print(f"✅ {nick} se ha reconectado. Emitiendo rival_reconectado")
+            # ✅ NO emitir si es partida contra bot
+            if not salas[sala_id].get('es_bot', False):
                 socketio.emit('rival_reconectado', {}, room=sala_id)
-                del salas[sala_id]['desconectado']
+            del salas[sala_id]['desconectado']
             
             if nick in temporizadores_reconexion:
                 print(f"🔄 Cancelando temporizador de reconexión para {nick}")
