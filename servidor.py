@@ -7,6 +7,7 @@ import hashlib
 import os
 import time
 import threading
+import chess
 from supabase import create_client, Client
 
 app = Flask(__name__, static_folder='.', static_url_path='')
