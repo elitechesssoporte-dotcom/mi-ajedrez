@@ -314,100 +314,138 @@
 			bottom: 0;
 			pointer-events: none;
 		}
-		/* Adaptación completa para móvil */
-@media (max-width: 768px) {
-    body {
-        overflow: hidden;
-        touch-action: none;
-    }
-    
-    .contenedor-principal {
-        flex-direction: column !important;
-        gap: 10px !important;
-        padding: 15px 5px 10px 5px !important;
-        width: 100% !important;
-        max-width: 100vw;
-        margin-top: 10px !important;
-    }
-    
-    /* Botones arriba en fila */
-    .area-botones {
-        flex-direction: row !important;
-        width: 100% !important;
-        justify-content: center;
-        gap: 5px !important;
-        order: 1;
-        padding-top: 10px !important;
-        margin-bottom: 5px !important;
-    }
-    
-    .btn-partida {
-        width: auto !important;
-        padding: 8px 12px !important;
-        font-size: 0.8em !important;
-        flex: 1;
-    }
-    
-    /* Área de juego centrada */
-    .area-juego {
-        width: 100% !important;
-        order: 2;
-    }
-    
-    .player-info {
-        width: 100% !important;
-        max-width: 100vw;
-        padding: 8px 12px !important;
-    }
-    
-    #board {
-        width: 100% !important;
-        max-width: 100vw;
-        margin: 5px 0 !important;
-    }
-    
-    /* En móvil: ocultar notación pero mostrar controles */
-    .area-notacion {
-        display: flex !important;
-        flex-direction: column;
-        gap: 10px;
-        order: 3;
-    }
-
-    .panel-notacion {
-        display: none !important;
-    }
-
-    .controles-reproduccion {
-        width: 100% !important;
-        max-width: 400px;
-        margin: 0 auto;
-        background: #222;
-        border: 2px solid #444;
-        border-radius: 8px;
-        padding: 10px;
-        display: flex !important;
-        justify-content: space-around;
-        align-items: center;
-        order: 3;
-    }
-
-    .controles-reproduccion .btn-reproduccion {
-        width: 45px !important;
-        height: 45px !important;
-        font-size: 1.1em !important;
-    }
-    
-    .reloj {
-        font-size: 1.2em !important;
-    }
-}
+        
         /* Resaltado de Jaque */
         .check-highlight {
             box-shadow: inset 0 0 15px 5px rgba(255, 0, 0, 0.8) !important;
             background-color: rgba(255, 0, 0, 0.5) !important;
             transition: all 0.3s ease;
         }
+
+        /* ✅ FIX MÓVIL COMPLETO */
+        @media (max-width: 768px) {
+            html, body {
+                overflow: hidden !important;
+                position: fixed !important;
+                width: 100% !important;
+                height: 100% !important;
+                touch-action: none !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .contenedor-principal {
+                flex-direction: column !important;
+                gap: 5px !important;
+                padding: 5px !important;
+                width: 100% !important;
+                max-width: 100vw !important;
+                margin: 0 auto !important;
+                overflow: hidden !important;
+                height: 100vh !important;
+                justify-content: flex-start !important;
+            }
+            
+            /* Botones arriba en fila compacta */
+            .area-botones {
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                width: 100% !important;
+                justify-content: center;
+                gap: 3px !important;
+                order: 1;
+                padding: 3px 0 !important;
+                margin-bottom: 3px !important;
+            }
+            
+            .btn-partida {
+                width: auto !important;
+                padding: 6px 8px !important;
+                font-size: 0.65em !important;
+                flex: 1;
+                min-width: 60px;
+                max-width: 80px;
+            }
+            
+            #btn-cancelar-partida {
+                width: 100% !important;
+                max-width: 100% !important;
+                font-size: 0.7em !important;
+                padding: 5px !important;
+                order: 5;
+            }
+            
+            /* Área de juego centrada */
+            .area-juego {
+                width: 100% !important;
+                order: 2;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            
+            .player-info {
+                width: 100% !important;
+                max-width: 100vw !important;
+                padding: 5px 10px !important;
+                font-size: 0.85em;
+            }
+            
+            .reloj {
+                font-size: 1.1em !important;
+            }
+            
+            #board {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                margin: 0 auto !important;
+                touch-action: none !important;
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            
+            .square-55d63 {
+                touch-action: none !important;
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            
+            /* Notación oculta en móvil */
+            .area-notacion {
+                display: flex !important;
+                flex-direction: column;
+                gap: 5px;
+                order: 3;
+                width: 100% !important;
+            }
+
+            .panel-notacion {
+                display: none !important;
+            }
+
+            .controles-reproduccion {
+                width: 100% !important;
+                max-width: 100vw !important;
+                padding: 5px !important;
+                order: 3;
+            }
+
+            .controles-reproduccion .btn-reproduccion {
+                width: 40px !important;
+                height: 40px !important;
+                font-size: 1em !important;
+            }
+            
+            #info-jugador {
+                font-size: 0.8em;
+                margin: 2px 0;
+            }
+        }
+		/* ✅ Resaltado para clic-to-move */
+.square-55d63.selected {
+    background: rgba(196, 160, 40, 0.6) !important;
+    box-shadow: inset 0 0 0 3px #c4a028 !important;
+}
     </style>
 </head>
 <body>
@@ -416,12 +454,12 @@
     <!-- Botones a la izquierda -->
     <div class="area-botones">
         <button class="btn-partida btn-revancha" onclick="ofrecerRevancha()">🔄 Revancha</button>
-        <button class="btn-partida btn-tablas" onclick="ofrecerTablas()">🤝 Tablas</button>
+        <button class="btn-partida btn-tablas" onclick="ofrecerTablas()"> Tablas</button>
 		<button id="btn-cancelar-partida" onclick="cancelarPartida()" style="background: #ff9800; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;">
     🚪 Cancelar partida
 </button>
         <button class="btn-partida btn-abandonar" onclick="abandonarPartida()">🏳️ Abandonar</button>
-		<button class="btn-partida btn-salir" id="btnSalir" onclick="salirAlMenu()" disabled>🏠 Salir al Menú</button>
+		<button class="btn-partida btn-salir" id="btnSalir" onclick="salirAlMenu()" disabled> Salir al Menú</button>
     </div>
     
     <!-- Tablero y jugadores -->
@@ -456,7 +494,7 @@
         
         <!-- Controles de reproducción -->
         <div class="controles-reproduccion">
-            <button class="btn-reproduccion" id="btnInicio" onclick="irAlInicio()" title="Ir al inicio">⏮</button>
+            <button class="btn-reproduccion" id="btnInicio" onclick="irAlInicio()" title="Ir al inicio"></button>
             <button class="btn-reproduccion" id="btnAnterior" onclick="movimientoAnterior()" title="Anterior">◀</button>
             <button class="btn-reproduccion" id="btnSiguiente" onclick="movimientoSiguiente()" title="Siguiente">▶</button>
             <button class="btn-reproduccion" id="btnFinal" onclick="irAlFinal()" title="Ir al final">⏭</button>
@@ -482,8 +520,6 @@
 	// === SONIDOS DE MADERA LOCALES ===
 let sonidoActivado = true;
 
-// ️ IMPORTANTE: Verifica la extensión de tus archivos (.mp3 o .wav)
-// Haz clic derecho en cada archivo → Propiedades → Tipo de archivo
 const sonidoMadera = new Audio('sounds/freesound-community-knock-on-door-86241_LGzYGu8b.mp3');
 
 sonidoMadera.volume = 0.7;
@@ -493,12 +529,10 @@ function reproducirSonido(tipo) {
     if (!sonidoActivado) return;
     
     if (tipo === 'enroque') {
-        //  Enroque: Doble golpe rápido
         sonidoMadera.currentTime = 0;
         sonidoMadera.volume = 0.7;
         sonidoMadera.play().catch(e => console.log('Audio bloqueado'));
         
-        // Segundo golpe 150ms después
         setTimeout(() => {
             sonidoMadera.currentTime = 0;
             sonidoMadera.play().catch(e => {});
@@ -506,7 +540,6 @@ function reproducirSonido(tipo) {
         
         console.log(' Enroque - doble golpe');
     } else {
-        // Movimiento normal: Un solo golpe
         sonidoMadera.currentTime = 0;
         sonidoMadera.volume = 0.7;
         sonidoMadera.play().catch(error => {
@@ -515,7 +548,6 @@ function reproducirSonido(tipo) {
     }
 }
 
-// Desbloquear ambos sonidos con el primer clic
 document.addEventListener('click', function desbloquear() {
     sonidoMadera.volume = 0.01;
     sonidoMadera.play()
@@ -539,7 +571,7 @@ const tiempoMinutos = parseInt(localStorage.getItem('tiempoPartida')) || 5;
 const incremento = parseInt(localStorage.getItem('incrementoPartida')) || 0;
 let miElo = localStorage.getItem('miElo') || 1200;
 let rivalElo = localStorage.getItem('rivalElo') || 1200;
-// ✅ LIMPIAR esTorneo si no hay torneo activo (partida normal)
+
 if (!localStorage.getItem('torneoActual')) {
     localStorage.removeItem('esTorneo');
     console.log('🧹 esTorneo limpiado - partida normal detectada');
@@ -557,6 +589,7 @@ console.log('CONECTANDO - Sala:', salaId, '| Mi color:', miColor, '| Mi nick:', 
     
     var game = new Chess();
     var board = null;
+	var casillaSeleccionada = null;
     var intervaloReloj = null;
     var segundosBlanco = tiempoMinutos * 60;
     var segundosNegro = tiempoMinutos * 60;
@@ -569,7 +602,6 @@ console.log('CONECTANDO - Sala:', salaId, '| Mi color:', miColor, '| Mi nick:', 
 	var premove = null;
 	var premoveActivo = false;
     
-    // Variables para sistema de desconexión
     var temporizadorDesconexion = null;
     var verificacionPartida = null;
     
@@ -600,11 +632,9 @@ socket.on('connect', function() {
     }
 });
     
-    // FUNCIONES DE NOTACIÓN
-    
     const figurines = {
         'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '',
-        'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': ''
+        'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '', 'p': ''
     };
     
     function convertirAFigurines(nota, color) {
@@ -656,7 +686,7 @@ socket.on('connect', function() {
         if (color === 'w') {
             if (promocion === 'Q') piezaPromocion = '♕';
             else if (promocion === 'R') piezaPromocion = '♖';
-            else if (promocion === 'B') piezaPromocion = '♗';
+            else if (promocion === 'B') piezaPromocion = '';
             else if (promocion === 'N') piezaPromocion = '♘';
             resultado += '<span class="figurine figurine-blanco">' + piezaPromocion + '</span>';
         } else {
@@ -689,7 +719,6 @@ socket.on('connect', function() {
         posicionActual = listaMovimientos.length * 2 - (listaMovimientos[listaMovimientos.length - 1].negras ? 0 : 1);
         actualizarPanelNotacion();
         actualizarBotonesReproduccion();
-		// 🆕 AÑADE ESTO AL FINAL:
     detectarApertura();
 	actualizarBotonCancelar();
     }
@@ -753,8 +782,6 @@ socket.on('connect', function() {
         contenido.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">Esperando movimientos...</div>';
         actualizarBotonesReproduccion();
     }
-    
-    // FUNCIONES DE REPRODUCCIÓN
     
     function irAPosicion(pos) {
     if (pos < 0 || pos > listaMovimientos.length * 2) return;
@@ -847,7 +874,6 @@ socket.on('connect', function() {
         }
     }
     
-    // FUNCIÓN DE VERIFICACIÓN DE PARTIDA
     function verificarEstadoPartida() {
     if (partidaFinalizada) return;
     
@@ -871,7 +897,6 @@ socket.on('connect', function() {
                 contadorElement.remove();
             }
             
-            // 🔥 NUEVO: Forzar actualización del DOM con requestAnimationFrame
             requestAnimationFrame(function() {
                 if (response.elo_blanco !== undefined && response.elo_negro !== undefined) {
                     if (miColor === 'white') {
@@ -899,7 +924,6 @@ socket.on('connect', function() {
                 
                 document.getElementById('btnSalir').disabled = false;
                 
-                // 🔥 NUEVO: Usar setTimeout para asegurar que el navegador procese los cambios
                 setTimeout(function() { 
                     alert('¡Tu rival se desconectó y no volvió! Has ganado.'); 
                 }, 200);
@@ -946,7 +970,22 @@ socket.on('recibir_movimiento', function(data) {
             to: data.movimiento.to,
             promotion: data.movimiento.promotion || 'q'
         });
+
+        if (move === null) {
+            console.error('❌ Movimiento inválido del bot:', data);
+            return; 
+        }
+
+        // ✅ AÑADIR: NO reproducir sonido si es mi propio movimiento (ya sonó al mover)
+        // Detectamos si es movimiento propio comparando el color del turno
+        var esMiPropioMovimiento = false;
+        if (miColor === 'white' && game.turn() === 'b') esMiPropioMovimiento = true;
+        if (miColor === 'black' && game.turn() === 'w') esMiPropioMovimiento = true;
         
+        if (!esMiPropioMovimiento) {
+            reproducirSonido('mover');  // ✅ Solo sonar si es el rival/bot
+        }
+
         if (miColor === 'white') {
             segundosNegro += incremento;
         } else {
@@ -956,34 +995,19 @@ socket.on('recibir_movimiento', function(data) {
         agregarMovimientoANotacion(move);
         
         board.position(game.fen());
-		resaltarJaque();
+        resaltarJaque();
         actualizarTurno();
         actualizarRelojes();
         console.log('Movimiento aplicado - Turno:', game.turn());
         comprobarFinDePartida();
         
-        if (premoveActivo && premove) {
-            var casillaOrigen = premove.from;
-            var piezaEnOrigen = game.get(casillaOrigen);
-            
-            if (!piezaEnOrigen || 
-                (miColor === 'white' && piezaEnOrigen.color === 'b') ||
-                (miColor === 'black' && piezaEnOrigen.color === 'w')) {
-                console.log('Premovimiento invalidado');
-                premove = null;
-                premoveActivo = false;
-                eliminarResaltePremove();
-            } else {
-                setTimeout(ejecutarPremove, 300);
-            }
-        }
+        // ... resto del código (premove) ...
         
     } catch (error) {
         console.error('Error al aplicar movimiento:', error);
     }
 });
 
-    // ESCUCHAR DESCONEXIÓN DEL RIVAL
     socket.on('rival_desconectado', function(data) {
     console.log('Rival desconectado:', data.mensaje);
     
@@ -1036,9 +1060,6 @@ socket.on('recibir_movimiento', function(data) {
         contadorElement.remove();
         console.log('Contador visual eliminado');
     }
-    
-    // ✅ NO llamar a verificarEstadoPartida()
-    // El servidor emitirá 'partida_finalizada' automáticamente cuando el timer se ejecute
 }
     }, 1000);
     
@@ -1047,25 +1068,20 @@ socket.on('recibir_movimiento', function(data) {
     }, 2000);
 });
 
-    // ESCUCHAR RECONEXIÓN DEL RIVAL
     socket.on('rival_reconectado', function() {
     console.log('EVENTO rival_reconectado RECIBIDO - Reanudando automáticamente');
     
-    // 1. Limpiar contadores de desconexión
     if (temporizadorDesconexion) { clearInterval(temporizadorDesconexion); temporizadorDesconexion = null; }
     if (verificacionPartida) { clearInterval(verificacionPartida); verificacionPartida = null; }
     
     var contadorElement = document.getElementById('contadorReconexion');
     if (contadorElement) { contadorElement.remove(); }
     
-    // 2. ✅ PEDIR TIEMPOS ACTUALES AL SERVIDOR
     socket.emit('solicitar_estado_partida', { sala: salaId });
     
-    // 3. Mostrar aviso visual
     mostrarAvisoTemporal('🟢 Tu oponente se ha reconectado. La partida continúa.');
 });
 
-// Función auxiliar para mostrar avisos que no bloquean
 function mostrarAvisoTemporal(mensaje) {
     var aviso = document.createElement('div');
     aviso.innerText = mensaje;
@@ -1075,43 +1091,37 @@ function mostrarAvisoTemporal(mensaje) {
     setTimeout(function() {
         aviso.style.opacity = '0';
         setTimeout(function() { aviso.remove(); }, 500);
-    }, 3000); // Desaparece a los 3 segundos
+    }, 3000);
 }
 
 socket.on('estado_partida', function(data) {
     console.log('Estado de partida recibido:', data);
     
-    // 1. Restaurar posición del tablero
     if (data.fen && data.fen !== 'start') {
         game.load(data.fen);
         board.position(data.fen);
-        resaltarJaque();  // ✅ Esta es la llamada que añadimos
+        resaltarJaque();
     }
     
-    // 2. RESTAURAR TIEMPOS ACTUALES
     if (data.segundos_blanco !== undefined && data.segundos_blanco !== null) {
         segundosBlanco = data.segundos_blanco;
         console.log('⏱️ Tiempo blancas restaurado:', segundosBlanco);
     }
     if (data.segundos_negro !== undefined && data.segundos_negro !== null) {
         segundosNegro = data.segundos_negro;
-        console.log('⏱️ Tiempo negras restaurado:', segundosNegro);
+        console.log('️ Tiempo negras restaurado:', segundosNegro);
     }
 
-    // 3. ✅ NUEVO: RECONSTRUIR LA NOTACIÓN DE MOVIMIENTOS
     if (data.movimientos && Array.isArray(data.movimientos) && data.movimientos.length > 0) {
         console.log('🔄 Reconstruyendo notación con', data.movimientos.length, 'movimientos...');
         
-        // Limpiamos la notación actual para evitar duplicados
         listaMovimientos = [];
         posicionActual = 0;
         
-        // Usamos un juego temporal para calcular la notación (SAN) sin afectar al juego principal
         var gameTemp = new Chess();
         
         data.movimientos.forEach(function(movData) {
             var moveTemp;
-            // El servidor puede enviar el objeto {from, to} o un string "e4"
             if (typeof movData === 'string') {
                 moveTemp = gameTemp.move(movData);
             } else {
@@ -1123,7 +1133,6 @@ socket.on('estado_partida', function(data) {
             }
             
             if (moveTemp) {
-                // Replicamos la lógica de tu función agregarMovimientoANotacion
                 if (listaMovimientos.length === 0 || listaMovimientos[listaMovimientos.length - 1].negras !== null) {
                     listaMovimientos.push({
                         numero: listaMovimientos.length + 1,
@@ -1136,7 +1145,6 @@ socket.on('estado_partida', function(data) {
             }
         });
         
-        // Posicionar el scroll y los botones al final de la partida
         posicionActual = listaMovimientos.length * 2;
         if (listaMovimientos.length > 0 && listaMovimientos[listaMovimientos.length - 1].negras === null) {
             posicionActual--;
@@ -1146,41 +1154,31 @@ socket.on('estado_partida', function(data) {
         actualizarBotonesReproduccion();
         console.log('✅ Notación reconstruida correctamente');
     } else {
-        // Si no hay movimientos, limpiamos el panel
         resetearNotacion();
     }
     
-        // 4. Actualizar relojes en pantalla
     actualizarRelojes();
     actualizarTurno();
     
-    // 5. Reanudar reloj si la partida no ha terminado
     if (!data.terminada && !partidaFinalizada) {
-        iniciarReloj(); // ✅ El reloj SOLO arranca cuando el servidor confirma el estado
-        console.log('⏱️ Reloj iniciado tras sincronización con el servidor');
+        iniciarReloj();
+        console.log('️ Reloj iniciado tras sincronización con el servidor');
     }
-	// 🆕 6. DETECTAR Y MOSTRAR LA APERTURA (al reconectar o cargar partida)
     setTimeout(detectarApertura, 200);
 });
 
-// 🆕 ESCUCHAR LA HORA EXACTA DEL SERVIDOR (Se emite cada 0.5s)
 socket.on('actualizacion_tiempo_servidor', function(data) {
-    // Actualizamos nuestras variables con la verdad absoluta del servidor
     segundosBlanco = data.blancas;
     segundosNegro = data.negras;
     
-    // Pintamos en pantalla inmediatamente
     actualizarRelojes();
     
-    // Obtener los elementos del DOM
     var relojYo = document.getElementById('relojYo');
     var relojRival = document.getElementById('relojRival');
     
-    // Determinar cuál es el reloj de las blancas y cuál el de las negras según tu color
     var relojBlancas = (miColor === 'white') ? relojYo : relojRival;
     var relojNegras = (miColor === 'black') ? relojYo : relojRival;
     
-    // Aplicar color rojo si quedan menos de 10 segundos, sino blanco
     if (relojBlancas) {
         relojBlancas.style.color = (segundosBlanco < 10) ? '#ff4444' : 'white';
     }
@@ -1189,7 +1187,6 @@ socket.on('actualizacion_tiempo_servidor', function(data) {
     }
 });
 
-// 🆕 ESCUCHAR CUANDO EL SERVIDOR DICTA FIN POR TIEMPO
 socket.on('fin_partida_tiempo', function(data) {
     console.log('⏰ El servidor ha dictado fin por tiempo. Ganador:', data.ganador);
     if (!partidaFinalizada) {
@@ -1198,8 +1195,6 @@ socket.on('fin_partida_tiempo', function(data) {
             clearInterval(intervaloReloj);
             intervaloReloj = null;
         }
-        // El servidor también emitirá 'partida_finalizada' con los ELOs, 
-        // pero esto asegura que la UI reaccione al instante.
     }
 });
 
@@ -1270,6 +1265,8 @@ socket.on('revancha_aceptada', function(data) {
         if (board) {
             board.orientation(miColor === 'white' ? 'white' : 'black');
         }
+		$('.square-55d63').removeClass('selected');
+casillaSeleccionada = null;
     }
     
     var miTexto = miColor === 'white' ? miNick + ' (' + miElo + ') (Blancas)' : miNick + ' (' + miElo + ') (Negras)';
@@ -1388,7 +1385,7 @@ socket.on('partida_finalizada', function(data) {
     }
    
     setTimeout(function() { alert(mensaje); }, 300);
-	    // ✅ REACTIVAR BOTÓN DE REVANCHA SI NO ES TORNEO
+    
     if (localStorage.getItem('esTorneo') !== 'true') {
         var btnRevancha = document.querySelector('.btn-revancha');
         if (btnRevancha) {
@@ -1423,7 +1420,6 @@ socket.on('sesion_cerrada', function(data) {
 });
     
     function formatearTiempo(segs) {
-    // ✅ Redondear para evitar decimales por precisión flotante
     var totalSegundos = Math.floor(segs);
     var m = Math.floor(totalSegundos / 60);
     var s = totalSegundos % 60;
@@ -1446,15 +1442,13 @@ socket.on('sesion_cerrada', function(data) {
     function iniciarReloj() {
     if (intervaloReloj) clearInterval(intervaloReloj);
     
-    // El servidor es el jefe del tiempo. Este intervalo solo actualiza la pantalla
-    // para que los números cambien de forma fluida.
     intervaloReloj = setInterval(function() {
         if (partidaFinalizada || game.game_over()) {
             clearInterval(intervaloReloj);
             return;
         }
-        actualizarRelojes(); // Solo actualiza el texto visual (MM:SS)
-    }, 500); // Se actualiza cada medio segundo para máxima fluidez
+        actualizarRelojes();
+    }, 500);
     
     console.log('⏱️ Reloj visual iniciado (el tiempo lo controla el servidor)');
 }
@@ -1513,92 +1507,107 @@ socket.on('sesion_cerrada', function(data) {
     }
 }
     
-function onDrop(source, target) {
-    console.log('Movimiento:', source, '->', target);
-    
+// ✅ FUNCIÓN CENTRAL: Procesa el movimiento (sonidos, socket, etc.)
+function procesarMovimiento(source, target) {
     var esMiTurno = false;
     if (miColor === 'white' && game.turn() === 'w') esMiTurno = true;
     if (miColor === 'black' && game.turn() === 'b') esMiTurno = true;
-    
+
     if (!esMiTurno) {
         premove = { from: source, to: target };
         premoveActivo = true;
-        
-        console.log('Premovimiento guardado:', source, '->', target);
-        
-        setTimeout(function() {
-            resaltarPremove(source, target);
-            console.log('Resalte de premove aplicado:', source, '->', target);
-        }, 200);
-        
-        return 'snapback';
+        setTimeout(function() { resaltarPremove(source, target); }, 200);
+        return false;
     }
-    
-    var move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q'
-    });
-    
+
+    var move = game.move({ from: source, to: target, promotion: 'q' });
     if (move === null) {
-        reproducirSonido('invalido');  // 🔊 Sonido de movimiento inválido
-        return 'snapback';
+        reproducirSonido('invalido');
+        return false;
     }
-    
+
     if (move.promotion) {
         game.undo();
         movimientoPendiente = { from: source, to: target };
         mostrarModalPromocion();
-        return 'snapback';
+        return false;
     }
-    
-    //  Reproducir sonido según tipo de movimiento
-    // Reproducir sonido según tipo de movimiento
-if (move.flags === 'k' || move.flags === 'q') {
-    // Enroque (k = corto, q = largo)
-    reproducirSonido('enroque');
-    console.log(' Enroque detectado');
-} else if (move.captured) {
-    reproducirSonido('capturar');
-} else {
-    reproducirSonido('mover');
-}
-    
-    // 🔊 Si hay jaque, reproducir sonido de jaque
-    if (game.in_check()) {
-        setTimeout(() => reproducirSonido('jaque'), 300);
-    }
-    
+
+    if (move.flags === 'k' || move.flags === 'q') reproducirSonido('enroque');
+    else if (move.captured) reproducirSonido('capturar');
+    else reproducirSonido('mover');
+
+    if (game.in_check()) setTimeout(() => reproducirSonido('jaque'), 300);
+
     agregarMovimientoANotacion(move);
     aplicarIncremento(miColor);
-    
+
     socket.emit('mover_pieza', {
         sala: salaId,
-        movimiento: {
-            from: move.from,
-            to: move.to,
-            promotion: move.promotion
-        },
+        movimiento: { from: move.from, to: move.to, promotion: move.promotion },
         fen: game.fen(),
     });
-    
+
     actualizarTurno();
     actualizarRelojes();
-    
-    console.log('Movimiento enviado - FEN:', game.fen().substring(0, 50));
     comprobarFinDePartida();
+    return true;
 }
+
+// ✅ onDrop simplificado (para cuando arrastras con el ratón/dedo)
+function onDrop(source, target) {
+    var success = procesarMovimiento(source, target);
+    if (!success) return 'snapback';
+}
+
+// ✅ NUEVO: Evento de Clic para mover (Click-to-Move)
+$('#board').on('click', '.square-55d63', function(e) {
+    if (partidaFinalizada || modoReproduccion) return;
+    if (e.type === 'mousedown' && e.button !== 0) return; // Ignorar clic derecho
     
-    function onSnapEnd() {
-    board.position(game.fen());  // ✅ Necesario para movimientos reales
-	resaltarJaque();
-    
-    // ✅ Para premove: reaplicar resaltado (el FEN no cambió, así que no hay doble animación)
-    if (premoveActivo && premove) {
-        setTimeout(function() {
-            resaltarPremove(premove.from, premove.to);
-        }, 50);
+
+    var casilla = $(this).attr('data-square');
+    if (!casilla) return;
+    var pieza = game.get(casilla);
+
+    if (casillaSeleccionada) {
+        // Si hace clic en la misma casilla, deseleccionar
+        if (casillaSeleccionada === casilla) {
+            $('.square-55d63').removeClass('selected');
+            casillaSeleccionada = null;
+            return;
+        }
+
+        var source = casillaSeleccionada;
+        var target = casilla;
+        
+        // Limpiar selección visual
+        $('.square-55d63').removeClass('selected');
+        casillaSeleccionada = null;
+
+        // Intentar mover
+        var success = procesarMovimiento(source, target);
+        
+        if (success) {
+            board.position(game.fen()); // Actualizar tablero visualmente
+        } else {
+            // Si falló el movimiento y clicó en otra pieza suya, seleccionarla
+            if (pieza && pieza.color === game.turn()) {
+                casillaSeleccionada = casilla;
+                $('#board .square-' + casilla).addClass('selected');
+            }
+        }
+    } else {
+        // Seleccionar pieza
+        if (pieza && pieza.color === game.turn()) {
+            $('.square-55d63').removeClass('selected');
+            casillaSeleccionada = casilla;
+            $('#board .square-' + casilla).addClass('selected');
+        }
     }
+});
+function onSnapEnd() {
+    board.position(game.fen());
 }
     
     function mostrarModalPromocion() {
@@ -1666,7 +1675,6 @@ if (move.flags === 'k' || move.flags === 'q') {
         fen: game.fen(),
     });
     
-    
     actualizarTurno();
     actualizarRelojes();
     
@@ -1725,7 +1733,7 @@ function comprobarFinDePartida() {
     
     if (game.in_checkmate()) {
         partidaFinalizada = true;
-        reproducirSonido('jaqueMate');  // 🔊 Sonido de jaque mate
+        reproducirSonido('jaqueMate');
         
         var ganador = game.turn() === 'w' ? 'black' : 'white';
         var ganadorTexto = game.turn() === 'w' ? 'Negras' : 'Blancas';
@@ -1740,7 +1748,7 @@ function comprobarFinDePartida() {
     
     if (game.in_draw() || verificarMaterialInsuficiente()) {
         partidaFinalizada = true;
-        reproducirSonido('tablas');  // 🔊 Sonido de tablas
+        reproducirSonido('tablas');
         
         var motivo = '';
         
@@ -1798,7 +1806,6 @@ function ejecutarPremove() {
         return;
     }
     
-    // ✅ AÑADE EL SONIDO AQUÍ:
     if (move.flags === 'k' || move.flags === 'q') {
         reproducirSonido('enroque');
     } else if (move.captured) {
@@ -1836,22 +1843,19 @@ function ejecutarPremove() {
     comprobarFinDePartida();
 }
 function resaltarJaque() {
-    // 1. Limpiar cualquier resaltado de jaque anterior
     $('.square-55d63').removeClass('check-highlight');
 
-    // 2. Verificar si el rey está en jaque
     if (game.in_check()) {
         var boardState = game.board();
-        var kingColor = game.turn(); // 'w' (blancas) o 'b' (negras)
+        var kingColor = game.turn();
         var kingSquare = '';
 
-        // 3. Buscar la casilla exacta del rey
         for (var i = 0; i < 8; i++) {
             for (var j = 0; j < 8; j++) {
                 var piece = boardState[i][j];
                 if (piece && piece.type === 'k' && piece.color === kingColor) {
-                    var file = String.fromCharCode(97 + j); // 'a' hasta 'h'
-                    var rank = 8 - i; // 8 hasta 1
+                    var file = String.fromCharCode(97 + j);
+                    var rank = 8 - i;
                     kingSquare = file + rank;
                     break;
                 }
@@ -1859,7 +1863,6 @@ function resaltarJaque() {
             if (kingSquare) break;
         }
 
-        // 4. Aplicar la clase CSS a esa casilla
         if (kingSquare) {
             $('#board .square-' + kingSquare).addClass('check-highlight');
         }
@@ -1894,7 +1897,6 @@ function eliminarResaltePremove() {
 }    
     
 function ofrecerRevancha() {
-    // 🚫 BLOQUEO PARA TORNEOS
     if (localStorage.getItem('esTorneo') === 'true') {
         alert('⚠️ En los torneos no hay revanchas. Cada partida es única.');
         return;
@@ -1938,14 +1940,12 @@ function ofrecerRevancha() {
 }
 
 	function salirAlMenu() {
-    // Verificar si es una partida de torneo ACTUAL
     const esTorneo = localStorage.getItem('esTorneo');
     const torneoId = localStorage.getItem('torneoActual');
     const salaId = localStorage.getItem('salaId');
     
     console.log('🔍 DEBUG - Es torneo:', esTorneo, '| Torneo ID:', torneoId, '| Sala ID:', salaId);
     
-    // Limpiar datos de la partida actual SIEMPRE
     localStorage.removeItem('salaId');
     localStorage.removeItem('miColor');
     localStorage.removeItem('rivalNick');
@@ -1955,14 +1955,11 @@ function ofrecerRevancha() {
     localStorage.removeItem('miElo');
     localStorage.removeItem('rivalElo');
     
-    // ✅ CORRECCIÓN: Solo ir a torneo si esTorneo es EXACTAMENTE 'true' Y hay torneoId
     if (esTorneo === 'true' && torneoId && torneoId.trim() !== '') {
         console.log('🏆 Volviendo a la sala del torneo:', torneoId);
-        // Limpiamos SOLO los datos de la partida, NO los del torneo
         window.location.href = 'sala_torneo.html';
     } else {
         console.log('🏠 Volviendo a configuración (partida normal o torneo inválido)');
-        // Partida normal o torneo inválido - limpiar TODO
         localStorage.removeItem('esTorneo');
         localStorage.removeItem('torneoActual');
         localStorage.removeItem('nombreTorneo');
@@ -2001,7 +1998,7 @@ function deshabilitarBotonesPartida() {
     
     console.log('Botones de Tablas y Abandonar deshabilitados');
 }
-// === FUNCIÓN CENTRALIZADA PARA FINALIZAR PARTIDA (ARREGLA BUG DE REVANCHA) ===
+
 function manejarFinalDePartidaUI() {
     partidaFinalizada = true;
     document.getElementById('btnSalir').disabled = false;
@@ -2029,7 +2026,6 @@ function manejarFinalDePartidaUI() {
         btnCancelar.style.background = '#555';
     }
 
-    // ✅ REACTIVAR BOTÓN DE REVANCHA SOLO SI NO ES TORNEO
     var btnRevancha = document.querySelector('.btn-revancha');
     if (btnRevancha) {
         if (localStorage.getItem('esTorneo') === 'true') {
@@ -2047,6 +2043,8 @@ function manejarFinalDePartidaUI() {
         clearInterval(intervaloReloj);
         intervaloReloj = null;
     }
+	$('.square-55d63').removeClass('selected');
+casillaSeleccionada = null;
 }
 
 function habilitarBotonesPartida() {
@@ -2071,8 +2069,6 @@ function habilitarBotonesPartida() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM cargado');
     
-    // ✅ AQUÍ YA NO HAY LLAVES DE MÁS, TODO EL CÓDIGO VA DENTRO
-    
     var config = {
         draggable: true,
         position: 'start',
@@ -2095,8 +2091,16 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnSalir').disabled = true;
     console.log('🔊 Sistema de sonidos inicializado');
 
+    // ✅ FIX MÓVIL: Prevenir scroll al arrastrar piezas
     document.addEventListener('touchmove', function(e) {
         if (e.target.closest('#board')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // ✅ FIX MÓVIL: Bloquear scroll en todo el body excepto notación
+    document.body.addEventListener('touchmove', function(e) {
+        if (!e.target.closest('.notacion-contenido')) {
             e.preventDefault();
         }
     }, { passive: false });
@@ -2104,7 +2108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function ajustarTableroMovil() {
         if (window.innerWidth <= 768) {
             var ancho = window.innerWidth - 10;
-            var elementoBoard = document.getElementById('board'); // Cambié el nombre para evitar conflictos
+            var elementoBoard = document.getElementById('board');
             if (elementoBoard) {
                 elementoBoard.style.width = ancho + 'px';
                 elementoBoard.style.maxWidth = ancho + 'px';
@@ -2122,8 +2126,8 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('load', ajustarTableroMovil);
     ajustarTableroMovil();
 
-}); // <--- ESTA ES LA ÚNICA LLAVE Y PARÉNTESIS QUE CIERRA TODO AL FINAL
-// === DICCIONARIO DE APERTURAS (solo las más importantes) ===
+});
+
 const aperturasConocidas = {
     "e4 e5 Nf3 Nc6 Bb5": "Ruy López",
     "e4 e5 Nf3 Nc6 Bc4": "Italiana",
@@ -2155,12 +2159,10 @@ const aperturasConocidas = {
     "h3": "Desprez"
 };
 
-// === FUNCIÓN PARA DETECTAR LA APERTURA ===
 function detectarApertura() {
     const historia = game.history().join(' ');
     let nombreApertura = '';
     
-    // Buscar coincidencia más larga (ej: "e4 c5" antes que "e4")
     const clavesOrdenadas = Object.keys(aperturasConocidas).sort((a, b) => b.length - a.length);
     
     for (let clave of clavesOrdenadas) {
@@ -2170,15 +2172,13 @@ function detectarApertura() {
         }
     }
     
-    // Mostrar el nombre en pantalla
     const elemento = document.getElementById('nombre-apertura');
     if (elemento) {
         elemento.innerText = nombreApertura || 'Apertura no identificada';
     }
 }
-// === FUNCIÓN PARA CANCELAR PARTIDA ===
+
 function cancelarPartida() {
-    // 🚫 BLOQUEO DE SEGURIDAD PARA TORNEOS
     if (localStorage.getItem('esTorneo') === 'true') {
         alert('⚠️ No se puede cancelar una partida de torneo.');
         return;
@@ -2186,7 +2186,6 @@ function cancelarPartida() {
 
     const miColor = localStorage.getItem('miColor');
     const movimientosTotales = game.history().length;
-    // ... resto del código se mantiene igual
     
     let yaHeMovido = false;
     if (miColor === 'white' && movimientosTotales >= 1) yaHeMovido = true;
@@ -2205,7 +2204,6 @@ function cancelarPartida() {
     }
 }
 
-// === ESCUCHAR CONFIRMACIÓN DE CANCELACIÓN ===
 socket.on('partida_cancelada', function(data) {
     alert('🚪 ' + data.mensaje);
     localStorage.removeItem('salaId');
@@ -2214,13 +2212,10 @@ socket.on('partida_cancelada', function(data) {
     window.location.href = 'configuracion.html';
 });
 
-// === ESCUCHAR ERROR SI YA ES TARDE PARA CANCELAR ===
 socket.on('error_cancelar', function(data) {
     alert('⚠️ ' + data.mensaje);
 });
 
-
-// === DESACTIVAR BOTÓN CUANDO EL JUGADOR HACE SU PRIMERA JUGADA ===
 function actualizarBotonCancelar() {
     const btnCancelar = document.getElementById('btn-cancelar-partida');
     if (!btnCancelar) return;
@@ -2245,9 +2240,8 @@ function actualizarBotonCancelar() {
         btnCancelar.style.background = '#ff9800';
     }
     
-    btnCancelar.innerText = '🚪 Cancelar partida';
+    btnCancelar.innerText = ' Cancelar partida';
     
-    // 🆕 NUEVO: Controlar también el botón de Revancha en torneos
     const btnRevancha = document.querySelector('.btn-revancha');
     if (btnRevancha) {
         if (esTorneo) {
@@ -2255,7 +2249,6 @@ function actualizarBotonCancelar() {
             btnRevancha.style.opacity = '0.4';
             btnRevancha.style.cursor = 'not-allowed';
         } else {
-            // En partidas normales, solo habilitar si la partida terminó
             if (partidaFinalizada) {
                 btnRevancha.disabled = false;
                 btnRevancha.style.opacity = '1';
@@ -2268,6 +2261,11 @@ function actualizarBotonCancelar() {
         }
     }
 }
+
+</script>
+
+</body>
+</html>
 
 // Llamar a esta función después de cada movimiento
 // Busca la función agregarMovimientoANotacion y añade al final:
