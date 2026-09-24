@@ -441,10 +441,24 @@
                 margin: 2px 0;
             }
         }
-		/* ✅ Resaltado para clic-to-move */
+		/* ✅ Resaltado mejorado para clic-to-move */
 .square-55d63.selected {
-    background: rgba(196, 160, 40, 0.6) !important;
-    box-shadow: inset 0 0 0 3px #c4a028 !important;
+    background: rgba(196, 160, 40, 0.7) !important;
+    box-shadow: inset 0 0 0 4px #c4a028, 0 0 10px rgba(196, 160, 40, 0.5) !important;
+    transition: all 0.2s ease;
+}
+
+.square-55d63.selected::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30%;
+    height: 30%;
+    background: rgba(196, 160, 40, 0.8);
+    border-radius: 50%;
+    pointer-events: none;
 }
     </style>
 </head>
@@ -590,6 +604,7 @@ console.log('CONECTANDO - Sala:', salaId, '| Mi color:', miColor, '| Mi nick:', 
     var game = new Chess();
     var board = null;
 	var casillaSeleccionada = null;
+	var ultimoTiempoClic = 0;
     var intervaloReloj = null;
     var segundosBlanco = tiempoMinutos * 60;
     var segundosNegro = tiempoMinutos * 60;
@@ -972,18 +987,17 @@ socket.on('recibir_movimiento', function(data) {
         });
 
         if (move === null) {
-            console.error('❌ Movimiento inválido del bot:', data);
+            console.error('❌ Movimiento inválido:', data);
             return; 
         }
 
-        // ✅ AÑADIR: NO reproducir sonido si es mi propio movimiento (ya sonó al mover)
-        // Detectamos si es movimiento propio comparando el color del turno
+        // Detectamos si es movimiento propio para no duplicar sonidos
         var esMiPropioMovimiento = false;
         if (miColor === 'white' && game.turn() === 'b') esMiPropioMovimiento = true;
         if (miColor === 'black' && game.turn() === 'w') esMiPropioMovimiento = true;
         
         if (!esMiPropioMovimiento) {
-            reproducirSonido('mover');  // ✅ Solo sonar si es el rival/bot
+            reproducirSonido('mover');
         }
 
         if (miColor === 'white') {
@@ -1001,7 +1015,17 @@ socket.on('recibir_movimiento', function(data) {
         console.log('Movimiento aplicado - Turno:', game.turn());
         comprobarFinDePartida();
         
-        // ... resto del código (premove) ...
+        // 🚀 ¡AQUÍ ESTÁ LA MAGIA DEL PREMOVE!
+        // Verificamos si, tras el movimiento del rival, ahora es nuestro turno
+        var esTurnoMio = (miColor === 'white' && game.turn() === 'w') || 
+                         (miColor === 'black' && game.turn() === 'b');
+                         
+        if (esTurnoMio && premoveActivo && premove) {
+            // Un pequeño delay (50ms) para asegurar que el tablero terminó de pintar la jugada del rival
+            setTimeout(function() {
+                ejecutarPremove();
+            }, 50);
+        }
         
     } catch (error) {
         console.error('Error al aplicar movimiento:', error);
@@ -1411,6 +1435,15 @@ socket.on('partida_finalizada', function(data) {
     if (resultado) {
         anadirResultadoANotacion(resultado);
     }
+	// 🧹 LIMPIEZA DEL CLIENTE: Borrar datos de la sala después de 5 segundos
+    setTimeout(function() {
+        console.log('🧹 Limpiando localStorage de la partida finalizada');
+        localStorage.removeItem('salaId');
+        localStorage.removeItem('miColor');
+        localStorage.removeItem('rivalNick');
+        localStorage.removeItem('esTorneo');
+        localStorage.removeItem('torneoActual');
+    }, 5000); // 5 segundos para que el usuario pueda ver el resultado y pedir revancha si quiere
 });
 
 socket.on('sesion_cerrada', function(data) {
@@ -1475,32 +1508,25 @@ socket.on('sesion_cerrada', function(data) {
     }
     
     function onDragStart(source, piece) {
-    if (partidaFinalizada) {
-        return false;
-    }
-    
-    if (game.game_over()) {
-        return false;
-    }
-    
-    if (modoReproduccion) {
-        alert('Estás en modo reproducción. Haz clic en el último movimiento para volver a la partida.');
-        return false;
-    }
+    if (partidaFinalizada) return false;
+    if (game.game_over()) return false;
+    if (modoReproduccion) return false;
     
     var esMiTurno = false;
     if (miColor === 'white' && game.turn() === 'w') esMiTurno = true;
     if (miColor === 'black' && game.turn() === 'b') esMiTurno = true;
     
+    // ✅ Permitir premovimientos: si no es tu turno, permitir arrastrar piezas tuyas
     if (!esMiTurno) {
         if ((miColor === 'white' && piece.search(/^b/) !== -1) ||
             (miColor === 'black' && piece.search(/^w/) !== -1)) {
             return false;
         }
         console.log('Preparando premovimiento...');
-        return true;
+        return true;  // ✅ Esto permite el premovimiento
     }
     
+    // Si es tu turno, solo permitir tus piezas
     if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
         (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
         return false;
@@ -1554,27 +1580,41 @@ function procesarMovimiento(source, target) {
     return true;
 }
 
-// ✅ onDrop simplificado (para cuando arrastras con el ratón/dedo)
 function onDrop(source, target) {
+    // ✅ Si el origen y destino son la misma casilla, fue un clic, no un arrastre.
+    // Ignoramos el drop para que el evento 'click' de abajo lo maneje.
+    if (source === target) {
+        return 'snapback';
+    }
+    
     var success = procesarMovimiento(source, target);
     if (!success) return 'snapback';
 }
 
-// ✅ NUEVO: Evento de Clic para mover (Click-to-Move)
-$('#board').on('click', '.square-55d63', function(e) {
-    if (partidaFinalizada || modoReproduccion) return;
-    if (e.type === 'mousedown' && e.button !== 0) return; // Ignorar clic derecho
+// ✅ SISTEMA DE DOBLE CLIC MEJORADO (funciona en móvil y escritorio)
+$('#board').on('click touchend', '.square-55d63', function(e) {
+    e.preventDefault();  // Prevenir comportamiento por defecto
+    e.stopPropagation(); // Evitar que se propague
     
-
+    // Anti-rebote: evitar doble disparo en móvil
+    var ahora = Date.now();
+    if (ahora - ultimoTiempoClic < 300) return;
+    ultimoTiempoClic = ahora;
+    
+    if (partidaFinalizada || modoReproduccion) return;
+    
     var casilla = $(this).attr('data-square');
     if (!casilla) return;
     var pieza = game.get(casilla);
+
+    console.log('️ Clic en:', casilla, '| Pieza:', pieza);
 
     if (casillaSeleccionada) {
         // Si hace clic en la misma casilla, deseleccionar
         if (casillaSeleccionada === casilla) {
             $('.square-55d63').removeClass('selected');
             casillaSeleccionada = null;
+            console.log('❌ Deseleccionado');
             return;
         }
 
@@ -1585,27 +1625,41 @@ $('#board').on('click', '.square-55d63', function(e) {
         $('.square-55d63').removeClass('selected');
         casillaSeleccionada = null;
 
-        // Intentar mover
+        // Intentar mover (o premover si no es tu turno)
         var success = procesarMovimiento(source, target);
         
         if (success) {
-            board.position(game.fen()); // Actualizar tablero visualmente
+            board.position(game.fen());
+            console.log('✅ Movimiento ejecutado:', source, '->', target);
         } else {
-            // Si falló el movimiento y clicó en otra pieza suya, seleccionarla
-            if (pieza && pieza.color === game.turn()) {
+            // Si falló y clicó en otra pieza suya, seleccionarla
+            if (pieza && ((pieza.color === game.turn()) || (!esMiTurnoActual() && pieza.color === miColor.charAt(0)))) {
                 casillaSeleccionada = casilla;
                 $('#board .square-' + casilla).addClass('selected');
+                console.log('🔄 Seleccionada nueva pieza:', casilla);
+            } else {
+                console.log('⚠️ Movimiento inválido, no se selecciona nada');
             }
         }
     } else {
-        // Seleccionar pieza
-        if (pieza && pieza.color === game.turn()) {
+        // Seleccionar pieza (solo si es tu turno o para premovimiento)
+        var esMiTurno = esMiTurnoActual();
+        
+        if (pieza && ((pieza.color === game.turn()) || (!esMiTurno && pieza.color === miColor.charAt(0)))) {
             $('.square-55d63').removeClass('selected');
             casillaSeleccionada = casilla;
             $('#board .square-' + casilla).addClass('selected');
+            console.log('✅ Pieza seleccionada:', casilla);
         }
     }
 });
+
+// Helper para verificar si es mi turno
+function esMiTurnoActual() {
+    if (miColor === 'white' && game.turn() === 'w') return true;
+    if (miColor === 'black' && game.turn() === 'b') return true;
+    return false;
+}
 function onSnapEnd() {
     board.position(game.fen());
 }
@@ -2069,8 +2123,12 @@ function habilitarBotonesPartida() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM cargado');
     
+    //  Detectar si es dispositivo táctil/móvil
+    var esMovil = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    console.log(' Es móvil/táctil:', esMovil);
+    
     var config = {
-        draggable: true,
+        draggable: !esMovil,  //  Desactivar arrastre en móvil
         position: 'start',
         orientation: miColor || 'white',
         onDragStart: onDragStart,
@@ -2091,7 +2149,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnSalir').disabled = true;
     console.log('🔊 Sistema de sonidos inicializado');
 
-    // ✅ FIX MÓVIL: Prevenir scroll al arrastrar piezas
+    // ✅ FIX MÓVIL: Prevenir scroll al tocar el tablero
     document.addEventListener('touchmove', function(e) {
         if (e.target.closest('#board')) {
             e.preventDefault();
@@ -2263,6 +2321,9 @@ function actualizarBotonCancelar() {
 }
 
 </script>
+
+</body>
+</html>
 
 </body>
 </html>
