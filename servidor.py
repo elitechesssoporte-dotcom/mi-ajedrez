@@ -812,7 +812,11 @@ class BotAjedrez:
 
 def activar_bot_contra_jugador(jugador_id, data):
     with app.app_context():
-        print(f" Activando bot para {jugador_id}...")
+        # 🧹 LIMPIEZA CRÍTICA: Sacar al jugador de la cola de espera
+        global cola_espera
+        cola_espera = [j for j in cola_espera if j['id'] != jugador_id]
+        print(f" {jugador_id} eliminado de cola_espera al activar bot")
+        
         if data.get('esTorneo') == 'true':
             print("⚠️ No activar bot: es torneo")
             return
@@ -941,14 +945,25 @@ def jugar_bot(sala_id, color_bot, jugador_id):
                 if bot.board.is_game_over():
                     salas[sala_id]['partida_terminada'] = True
                     print(f"🏁 Partida contra bot finalizada en {sala_id}")
+                    
+                    # 🧹 LIMPIEZA CRÍTICA: Liberar al jugador para que no aparezca como "en partida"
+                    if jugador_id in partidas_activas:
+                        del partidas_activas[jugador_id]
+                    
+                    # También limpiamos por si acaso está registrado con su nick
+                    nick_jugador = salas[sala_id].get('blanco') if salas[sala_id].get('blanco') != "🤖 FighterBot" else salas[sala_id].get('negro')
+                    if nick_jugador and nick_jugador in partidas_activas:
+                        del partidas_activas[nick_jugador]
+                        
+                    print(f"🧹 Jugador {jugador_id} ({nick_jugador}) liberado de partidas_activas")
                     break
-        time.sleep(1)
 
 @socketio.on('buscar_partida')
 def buscar_partida(data):
     jugador_id = request.sid
     usuario = data.get('usuario', 'Anónimo')
     
+    # 1. Verificar que el usuario esté conectado
     usuario_conectado = None
     for n in usuarios_conectados.keys():
         if n.lower() == usuario.lower():
@@ -965,6 +980,12 @@ def buscar_partida(data):
         usuarios_conectados[usuario_conectado] = jugador_id
     
     print(f"🔍 Jugador {jugador_id} ({usuario_conectado}) busca partida")
+    
+    # ✅ FIX CRÍTICO: Eliminar cualquier entrada previa de este jugador en la cola para evitar duplicados
+    global cola_espera
+    cola_espera = [j for j in cola_espera if j['id'] != jugador_id]
+    
+    es_torneo = data.get('esTorneo', 'false') == 'true'
     
     if len(cola_espera) > 0:
         for i, rival in enumerate(cola_espera):
@@ -984,6 +1005,7 @@ def buscar_partida(data):
             rival_color = rival['data']['color']
             mi_color = data['color']
             
+            # Lógica de asignación de colores
             if rival_color == 'random' and mi_color == 'random':
                 if random.random() < 0.5:
                     color_rival_final = 'white'
@@ -1004,18 +1026,20 @@ def buscar_partida(data):
                     color_rival_final = rival_color
                     color_mio_final = mi_color
             
-            # --- AQUÍ SE CREA LA SALA Y sala_id ---
-            cola_espera.pop(i)
-                        # 🤖 Cancelar temporizador del bot si encuentra rival humano
+            # ✅ Cancelar temporizador del bot si existía (ya encontró humano)
             if jugador_id in temporizadores_bot:
                 temporizadores_bot[jugador_id].cancel()
                 del temporizadores_bot[jugador_id]
+            
+            # Sacar al rival de la cola
+            rival_sacado = cola_espera.pop(i)
+            
             sala_id = str(uuid.uuid4())
             
             jugador1 = {
-                'id': rival['id'], 
+                'id': rival_sacado['id'], 
                 'color': color_rival_final,
-                'nick': rival['data'].get('usuario', 'Anónimo')
+                'nick': rival_sacado['data'].get('usuario', 'Anónimo')
             }
             jugador2 = {
                 'id': jugador_id, 
@@ -1034,11 +1058,11 @@ def buscar_partida(data):
                 'tiempo': data.get('tiempo'),
                 'incremento': data.get('incremento', 0),
                 'estadisticas_actualizadas': False,
-                'tiempo_restante_blanco': tiempo_inicial_segundos, # 🆕
-                'tiempo_restante_negro': tiempo_inicial_segundos,   # 🆕
-                'ultimo_movimiento': time.time(),                   # 🆕 Timestamp del servidor
-                'turno': 'blanco'                                   # 🆕 Quién empieza
-            
+                'tiempo_restante_blanco': tiempo_inicial_segundos,
+                'tiempo_restante_negro': tiempo_inicial_segundos,
+                'ultimo_movimiento': time.time(),
+                'turno': 'blanco',
+                'es_bot': False
             }
             
             join_room(sala_id, sid=jugador1['id'])
@@ -1048,7 +1072,6 @@ def buscar_partida(data):
             elo1 = obtener_elo(jugador1['nick'], categoria)
             elo2 = obtener_elo(jugador2['nick'], categoria)
             
-            # --- EMITIR DENTRO DEL BLOQUE DONDE sala_id YA EXISTE ---
             emit('partida_encontrada', {
                 'sala': sala_id,
                 'color': color_rival_final,
@@ -1057,47 +1080,54 @@ def buscar_partida(data):
                 'mi_elo': elo1,
                 'rival_elo': elo2,
                 'segundos_blanco': tiempo_inicial_segundos,
-                'segundos_negro': tiempo_inicial_segundos
+                'segundos_negro': tiempo_inicial_segundos,
+                'es_bot': False
             }, room=jugador1['id'])
             
             emit('partida_encontrada', {
                 'sala': sala_id,
                 'color': color_mio_final,
                 'config': data,
-                'rival_nick': rival['data'].get('usuario', 'Anónimo'),
+                'rival_nick': rival_sacado['data'].get('usuario', 'Anónimo'),
                 'mi_elo': elo2,
                 'rival_elo': elo1,
                 'segundos_blanco': tiempo_inicial_segundos,
-                'segundos_negro': tiempo_inicial_segundos
+                'segundos_negro': tiempo_inicial_segundos,
+                'es_bot': False
             }, room=jugador2['id'])
             
             print(f"✅ Partida creada: {jugador1['nick']} vs {jugador2['nick']} | Sala: {sala_id}")
             emitir_cola_espera()
-            return  # <--- IMPORTANTE: Salir de la función aquí
+            return  # Salir de la función, ya hay partida
         
-        # Si el bucle termina sin encontrar rival (ej: todos tienen el mismo color)
+        # Si el bucle termina sin encontrar rival compatible, se añade a la cola
         cola_espera.append({'id': jugador_id, 'data': data})
-                # 🤖 Programar activación del bot si es partida normal (15 segundos)
-        if data.get('esTorneo') != 'true':
+        emit('esperando_rival', {'mensaje': f'Esperando rival que elija {data.get("tiempo", 5)} minutos...'})
+        print(f"⏳ Jugador {usuario} en cola esperando rival compatible")
+        
+        # ✅ Activar temporizador del bot si no es torneo
+        if not es_torneo:
             timer = threading.Timer(15, activar_bot_contra_jugador, args=(jugador_id, data))
             timer.daemon = True
             timer.start()
             temporizadores_bot[jugador_id] = timer
             print(f"⏰ Temporizador bot iniciado para {usuario} (15s)")
-        emit('esperando_rival', {'mensaje': f'Esperando rival que elija {data.get("tiempo", 5)} minutos...'})
-        print(f"⏳ Jugador {usuario} en cola esperando rival con {data.get('tiempo', 5)} min")
+        
         emitir_cola_espera()
     else:
+        # Cola vacía, se añade y se activa el bot
         cola_espera.append({'id': jugador_id, 'data': data})
-                # 🤖 Programar activación del bot si es partida normal (15 segundos)
-        if data.get('esTorneo') != 'true':
+        emit('esperando_rival', {'mensaje': 'Esperando a que se conecte un rival...'})
+        print(f"⏳ Jugador {usuario} en cola de espera (cola vacía)")
+        
+        # ✅ Activar temporizador del bot si no es torneo
+        if not es_torneo:
             timer = threading.Timer(15, activar_bot_contra_jugador, args=(jugador_id, data))
             timer.daemon = True
             timer.start()
             temporizadores_bot[jugador_id] = timer
             print(f"⏰ Temporizador bot iniciado para {usuario} (15s)")
-        emit('esperando_rival', {'mensaje': 'Esperando a que se conecte un rival...'})
-        print(f"⏳ Jugador {usuario} en cola de espera")
+        
         emitir_cola_espera()
 @socketio.on('pedir_cola_espera')
 def pedir_cola_espera():
@@ -1109,8 +1139,6 @@ def reunirse_a_sala(data):
     sala_id = data.get('sala')
     jugador_id = request.sid
     
-    import time
-    
     nick = None
     for n, sid in usuarios_conectados.items():
         if sid == jugador_id:
@@ -1120,6 +1148,12 @@ def reunirse_a_sala(data):
     print(f"🔄 Reunirse a sala - Jugador: {jugador_id}, Nick: {nick}, Sala: {sala_id}")
 
     if sala_id in salas:
+        # 🛡️ NUEVO: Bloquear entrada si la partida ya terminó
+        if salas[sala_id].get('partida_terminada', False):
+            print(f"⚠️ {nick} intentó reunirse a una partida ya terminada ({sala_id}). Bloqueado.")
+            emit('partida_ya_terminada', {'mensaje': 'Esta partida ya ha finalizado y no se puede reanudar.'})
+            return  # <--- Salimos de la función, no lo dejamos entrar
+
         join_room(sala_id, sid=jugador_id)
         partidas_activas[jugador_id] = sala_id
         
@@ -1129,20 +1163,10 @@ def reunirse_a_sala(data):
             
             if salas[sala_id].get('desconectado') == nick:
                 print(f"✅ {nick} se ha reconectado. Emitiendo rival_reconectado")
-            # ✅ NO emitir si es partida contra bot
-            if not salas[sala_id].get('es_bot', False):
-                socketio.emit('rival_reconectado', {}, room=sala_id)
-            del salas[sala_id]['desconectado']
-            
-            if nick in temporizadores_reconexion:
-                print(f"🔄 Cancelando temporizador de reconexión para {nick}")
-                timer = temporizadores_reconexion[nick]
-                if hasattr(timer, 'cancel'):
-                    timer.cancel()
-                del temporizadores_reconexion[nick]
-                print(f"✅ Reconexión exitosa de {nick}")
-        else:
-            print(f"⚠️ ADVERTENCIA: No se encontró nick para {jugador_id}")
+                if not salas[sala_id].get('es_bot', False):
+                    socketio.emit('rival_reconectado', {}, room=sala_id)
+                if 'desconectado' in salas[sala_id]:
+                    del salas[sala_id]['desconectado']
             
 @socketio.on('solicitar_estado_partida')
 def solicitar_estado_partida(data):
@@ -1390,12 +1414,27 @@ def fin_partida(data):
         actualizar_elo_db(nick_blanco, nuevo_elo_blanco, categoria)
         actualizar_elo_db(nick_negro, nuevo_elo_negro, categoria)
         
+                # ... (tu código de cálculo de ELOs) ...
+        
         salas[sala_id]['elo_blanco'] = nuevo_elo_blanco
         salas[sala_id]['elo_negro'] = nuevo_elo_negro
         print(f"💾 ELOs guardados en sala {sala_id}: Blanco={nuevo_elo_blanco}, Negro={nuevo_elo_negro}")
         
+        # 🧹 LIMPIEZA CRÍTICA: Sacar a ambos jugadores de partidas_activas
+        nb = sala.get('blanco')
+        nn = sala.get('negro')
+        sid_b = usuarios_conectados.get(nb)
+        sid_n = usuarios_conectados.get(nn)
+        
+        for id_a_limpiar in [sid_b, sid_n, nb, nn]:
+            if id_a_limpiar and id_a_limpiar in partidas_activas:
+                del partidas_activas[id_a_limpiar]
+                print(f"🧹 {id_a_limpiar} liberado de partidas_activas")
+        
     except Exception as e:
         print(f"❌ Error al actualizar ELO: {e}")
+    
+    # 7. Emitir finalización...
     
     # 7. ✅ CORREGIDO: Usar las variables reales 'motivo' y 'ganador'
     emit('partida_finalizada', {
@@ -1731,9 +1770,15 @@ def cancelar_busqueda():
     
     cola_espera = [j for j in cola_espera if j['id'] != jugador_id]
     
+    # 🧹 AÑADIR: Cancelar el temporizador del bot si estaba activo
+    if jugador_id in temporizadores_bot:
+        temporizadores_bot[jugador_id].cancel()
+        del temporizadores_bot[jugador_id]
+        print(f"⏰ Temporizador del bot cancelado para {jugador_id}")
+    
     print(f"❌ Jugador {jugador_id} canceló la búsqueda")
     emit('busqueda_cancelada', {'mensaje': 'Búsqueda cancelada correctamente'})
-    emitir_cola_espera()  # 🆕 Avisar que se eliminó de la cola       
+    emitir_cola_espera()       
 
 @socketio.on('obtener_clasificacion')
 def obtener_clasificacion(data):
