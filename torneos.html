@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torneos - FighterChess</title>
+    <title>Torneos Oficiales - FighterChess</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -15,13 +15,13 @@
             min-height: 100vh;
         }
         .nav-top {
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             width: fit-content;
         }
         .nav-top a {
             color: #888;
             text-decoration: none;
-            font-size: 0.75em;
+            font-size: 0.8em;
             display: inline-flex;
             align-items: center;
             gap: 4px;
@@ -35,92 +35,60 @@
         }
         
         .main-container {
-            max-width: 900px; /* ✅ Aumentado para acomodar 2 columnas */
+            max-width: 800px;
             margin: 0 auto;
         }
         
         h1 {
             color: #d4af37;
             text-align: center;
-            margin-bottom: 25px;
-            font-size: 1.6em;
+            margin-bottom: 10px;
+            font-size: 1.8em;
         }
-
-        /* ✅ NUEVO: Grid para las dos columnas */
-        .torneos-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 25px;
+        
+        .subtitulo {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 0.95em;
         }
-
-        .crear-torneo-box {
+        
+        .calendario-info {
             background: #111;
             border: 1px solid #333;
             border-radius: 12px;
             padding: 20px;
-            height: 100%; /* Para que ambas cajas tengan la misma altura */
-            display: flex;
-            flex-direction: column;
+            margin-bottom: 25px;
         }
         
-        .crear-torneo-box h2 {
+        .calendario-info h2 {
             color: #d4af37;
-            margin-bottom: 15px;
-            font-size: 1.2em;
-            text-align: center;
-        }
-        
-        .crear-torneo-box input, .crear-torneo-box select {
-            width: 100%;
-            padding: 12px;
             margin-bottom: 10px;
-            background: #000;
-            border: 1px solid #444;
-            color: white;
-            border-radius: 8px;
-            font-size: 0.95em;
+            font-size: 1.2em;
         }
         
-        .btn-crear {
-            width: 100%;
-            padding: 14px;
-            background: #d4af37;
-            color: black;
-            font-weight: bold;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: 0.3s;
-            margin-top: auto; /* Empuja el botón al fondo */
-        }
-        .btn-crear:hover { 
-            background: #f0d060; 
-            transform: translateY(-2px); 
-        }
-
-        /* Estilo distintivo para el botón suizo */
-        .btn-suizo {
-            background: #9c27b0;
-            color: white;
-        }
-        .btn-suizo:hover {
-            background: #ba68c8;
-        }
-
         .lista-torneos-box {
             background: #111;
             border: 1px solid #333;
             border-radius: 12px;
             padding: 20px;
         }
+        
         .lista-torneos-box h2 {
             color: #d4af37;
             margin-bottom: 15px;
             font-size: 1.2em;
-            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
+        
+        .contador-tiempo {
+            font-size: 0.8em;
+            color: #4CAF50;
+            font-weight: normal;
+        }
+        
         .torneo-item {
             display: flex;
             justify-content: space-between;
@@ -131,22 +99,39 @@
             margin-bottom: 10px;
             border-left: 4px solid #d4af37;
         }
-        .torneo-item.suizo {
-            border-left-color: #9c27b0; /* Borde morado para torneos suizos */
+        
+        .torneo-item.oficial {
+            background: linear-gradient(90deg, #1a1a1a 0%, #2a2515 100%);
         }
+        
+        .badge-oficial {
+            background: #d4af37;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        
         .torneo-info h3 { 
             color: white; 
             margin-bottom: 5px; 
-            font-size: 1.05em; 
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
         }
+        
         .torneo-info p { 
             color: #888; 
-            font-size: 0.85em; 
+            font-size: 0.85em;
+            margin: 3px 0;
         }
+        
         .btn-unirse {
             background: #4CAF50;
             color: white;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -154,47 +139,92 @@
             transition: 0.3s;
             white-space: nowrap;
             margin-left: 10px;
-            font-size: 0.9em;
+            font-size: 0.95em;
         }
+        
         .btn-unirse:hover { 
             background: #45a049; 
             transform: scale(1.05); 
         }
         
-        .mensaje-exito {
-            background: #1a3a1a;
-            border: 1px solid #4CAF50;
-            color: #4CAF50;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            text-align: center;
+        .btn-unirse:disabled {
+            background: #444;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-reintentar {
+            background: #d4af37;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
             font-weight: bold;
-            animation: fadeIn 0.3s ease;
+            margin-top: 10px;
+            transition: 0.3s;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .btn-reintentar:hover {
+            background: #f0d060;
+            transform: scale(1.05);
         }
         
-        /* ✅ RESPONSIVE: En móvil, una columna debajo de la otra */
+        .item-horario {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #222;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #d4af37;
+        }
+        
+        .item-horario .hora {
+            font-weight: bold;
+            color: #d4af37;
+            font-family: monospace;
+            font-size: 1em;
+            min-width: 50px;
+        }
+        
+        .item-horario .nombre {
+            color: #fff;
+            flex: 1;
+            margin-left: 15px;
+            font-size: 0.95em;
+        }
+        
+        .item-horario.pasado {
+            opacity: 0.4;
+        }
+        
+        .item-horario.activo {
+            background: rgba(76, 175, 80, 0.15);
+            border-left-color: #4CAF50;
+        }
+        
         @media (max-width: 768px) {
-            body { padding: 15px; }
-            .main-container { max-width: 100%; }
-            .torneos-grid {
-                grid-template-columns: 1fr; /* Apilar verticalmente */
-                gap: 15px;
+            .torneo-item {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
             }
-            h1 { font-size: 1.4em; }
-            .torneo-item { 
-                flex-direction: column; 
-                gap: 12px; 
-                text-align: center; 
+            
+            .btn-unirse {
+                margin-left: 0;
+                width: 100%;
             }
-            .btn-unirse { 
-                margin-left: 0; 
-                width: 100%; 
+            
+            .item-horario {
+                flex-direction: column;
+                gap: 5px;
+                text-align: center;
+            }
+            
+            .item-horario .nombre {
+                margin-left: 0;
             }
         }
     </style>
@@ -205,45 +235,28 @@
     </div>
 
     <div class="main-container">
-        <h1>🏆 Torneos FighterChess</h1>
+        <h1>🏆 Torneos Oficiales FighterChess</h1>
+        <p class="subtitulo">Torneos Arena automatizados - Únete y compite</p>
 
-        <!-- ✅ NUEVO: Grid de dos columnas -->
-        <div class="torneos-grid">
-            <!-- Columna Izquierda: Torneo Normal -->
-            <div class="crear-torneo-box">
-                <h2>⚡ Crear Torneo Normal</h2>
-                <input type="text" id="nombreTorneoInput" placeholder="Nombre del Torneo">
-                <select id="tiempoTorneoInput">
-                    <option value="1">1 min (Bullet)</option>
-                    <option value="3">3 min (Bullet)</option>
-                    <option value="5" selected>5 min (Blitz)</option>
-                    <option value="10">10 min (Rapid)</option>
-                    <option value="15">15 min (Rapid)</option>
-                </select>
-                <input type="number" id="duracionTorneoInput" value="30" min="5" max="120" placeholder="Duración en minutos">
-                <button class="btn-crear" onclick="crearTorneo()">Crear Torneo Normal</button>
-            </div>
-
-            <!-- Columna Derecha: Torneo Suizo -->
-            <div class="crear-torneo-box">
-                <h2>🇨🇭 Crear Torneo Suizo</h2>
-                <input type="text" id="nombreSuizoInput" placeholder="Nombre del Torneo Suizo">
-                <select id="tiempoSuizoInput">
-                    <option value="1">1 min (Bullet)</option>
-                    <option value="3">3 min (Bullet)</option>
-                    <option value="5" selected>5 min (Blitz)</option>
-                    <option value="10">10 min (Rapid)</option>
-                    <option value="15">15 min (Rapid)</option>
-                </select>
-                <input type="number" id="rondasSuizoInput" value="5" min="3" max="9" placeholder="Número de Rondas">
-                <button class="btn-crear btn-suizo" onclick="crearTorneoSuizo()">Crear Torneo Suizo</button>
+        <!-- Calendario Dinámico de HOY (Solo Arena) -->
+        <div class="calendario-info">
+            <h2 id="tituloDia">📅 Cargando día...</h2>
+            <p style="color: #888; font-size: 0.9em; margin-bottom: 15px;">
+                Los torneos se activan automáticamente a su hora programada.
+            </p>
+            <div id="horarioHoy">
+                <!-- Se llenará automáticamente con JavaScript -->
             </div>
         </div>
 
+        <!-- Lista de Torneos Activos -->
         <div class="lista-torneos-box">
-            <h2>📋 Torneos Activos</h2>
+            <h2>
+                📋 Torneos Activos
+                <span class="contador-tiempo" id="contadorTorneos"></span>
+            </h2>
             <div id="listaTorneos">
-                <p style="color:#888; text-align:center; padding: 20px;">No hay torneos activos en este momento</p>
+                <p style="color:#888; text-align:center; padding: 20px;">Cargando torneos...</p>
             </div>
         </div>
     </div>
@@ -251,135 +264,201 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
         const socket = io();
+        let intentosConexion = 0;
+        let listaRecibida = false;
+
+        // 🆕 DETECTAR EL DÍA ACTUAL Y MOSTRAR SOLO SU HORARIO
+        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const diaActual = diasSemana[new Date().getDay()];
         
-        socket.on('connect', function() {
-            console.log("✅ Conectado a torneos");
-            setTimeout(() => { socket.emit('pedir_torneos'); }, 500);
-        });
+        // Actualizar el título
+        document.getElementById('tituloDia').textContent = ` Torneos de Hoy: ${diaActual}`;
 
-        // --- TORNEO NORMAL ---
-        function crearTorneo() {
-            const nombre = document.getElementById('nombreTorneoInput').value.trim();
-            const tiempo = parseInt(document.getElementById('tiempoTorneoInput').value);
-            const duracion = parseInt(document.getElementById('duracionTorneoInput').value) * 60;
-            const miNick = localStorage.getItem('nickJugador');
+        // 🗓️ Base de datos del horario (SOLO TORNEOS ARENA)
+        const horarioSemanal = {
+            'Lunes': [
+                { hora: '18:00', tipo: 'arena', nombre: 'Arena Blitz (3+0)' }
+            ],
+            'Martes': [
+                { hora: '18:00', tipo: 'arena', nombre: 'Arena Blitz (5+0)' }
+            ],
+            'Miércoles': [
+                { hora: '18:00', tipo: 'arena', nombre: 'Arena Bullet (1+0)' }
+            ],
+            'Jueves': [
+                { hora: '18:00', tipo: 'arena', nombre: 'Arena Rapid (10+0)' }
+            ],
+            'Viernes': [
+                { hora: '18:00', tipo: 'arena', nombre: 'Arena Blitz (2+1)' }
+            ],
+            'Sábado': [
+                { hora: '10:00', tipo: 'arena', nombre: 'Arena Bullet (1+0)' },
+                { hora: '12:00', tipo: 'arena', nombre: 'Arena Blitz (3+0)' },
+                { hora: '16:00', tipo: 'arena', nombre: 'Arena Blitz (5+3)' },
+                { hora: '18:00', tipo: 'arena', nombre: 'Arena Rapid (10+0)' },
+                { hora: '20:00', tipo: 'arena', nombre: 'Arena Rapid Largo (15+10)' },
+                { hora: '22:00', tipo: 'arena', nombre: 'Arena Blitz Noche (3+2)' }
+            ],
+            'Domingo': [
+                { hora: '10:00', tipo: 'arena', nombre: 'Arena Blitz (2+1)' },
+                { hora: '12:00', tipo: 'arena', nombre: 'Arena Blitz (5+0)' },
+                { hora: '16:00', tipo: 'arena', nombre: 'Arena Blitz Relax (5+5)' },
+                { hora: '18:00', tipo: 'arena', nombre: 'Arena Rapid Relax (10+5)' },
+                { hora: '20:00', tipo: 'arena', nombre: 'Arena Rapid Largo (15+10)' },
+                { hora: '22:00', tipo: 'arena', nombre: 'Arena Blitz Noche (3+0)' }
+            ]
+        };
 
-            if (!nombre) { alert("⚠️ Por favor, pon un nombre al torneo"); return; }
-            if (!miNick) { alert("⚠️ Debes iniciar sesión primero"); window.location.href = "login.html"; return; }
-
-            console.log("⚡ Creando torneo normal:", nombre);
-            socket.emit('crear_torneo', {
-                nombre: nombre,
-                tiempo: tiempo,
-                duracion: duracion,
-                creador: miNick,
-                tipo: 'normal'
-            });
+        // Función para determinar el estado de un torneo según la hora actual
+        function getEstadoTorneo(horaStr) {
+            const ahora = new Date();
+            const [h, m] = horaStr.split(':').map(Number);
+            const horaTorneo = new Date();
+            horaTorneo.setHours(h, m, 0, 0);
+            
+            const diffMinutos = (ahora - horaTorneo) / (1000 * 60);
+            
+            if (diffMinutos > 120) return 'pasado';  // Más de 2 horas
+            if (diffMinutos > 0 && diffMinutos <= 120) return 'activo';  // En curso
+            return 'proximamente';  // Aún no ha empezado
         }
 
-        // --- TORNEO SUIZO (NUEVO) ---
-        function crearTorneoSuizo() {
-    const nombre = document.getElementById('nombreSuizoInput').value.trim();
-    const tiempo = parseInt(document.getElementById('tiempoSuizoInput').value);
-    const rondas = parseInt(document.getElementById('rondasSuizoInput').value);
-    const miNick = localStorage.getItem('nickJugador');
+        // Generar el HTML del horario de hoy
+        const contenedorHorario = document.getElementById('horarioHoy');
+        const torneosHoy = horarioSemanal[diaActual] || [];
+        
+        if (torneosHoy.length > 0) {
+            let htmlHorario = '';
+            torneosHoy.forEach(t => {
+                const estado = getEstadoTorneo(t.hora);
+                const claseEstado = estado === 'pasado' ? 'pasado' : (estado === 'activo' ? 'activo' : '');
+                
+                htmlHorario += `
+                    <div class="item-horario ${claseEstado}">
+                        <span class="hora">${t.hora}</span>
+                        <span class="nombre">⚡ ${t.nombre}</span>
+                        ${estado === 'activo' ? '<span style="color:#4CAF50;font-size:0.8em;font-weight:bold;">🟢 EN CURSO</span>' : ''}
+                    </div>
+                `;
+            });
+            contenedorHorario.innerHTML = htmlHorario;
+        } else {
+            contenedorHorario.innerHTML = '<p style="text-align:center; color:#888;">No hay torneos programados para hoy.</p>';
+        }
 
-    if (!nombre) { alert("⚠️ Por favor, pon un nombre al torneo"); return; }
-    if (!miNick) { alert("⚠️ Debes iniciar sesión primero"); window.location.href = "login.html"; return; }
-
-    // ✅ AÑADIR ESTA LÍNEA
-    localStorage.setItem('creadorTorneo', miNick);
-
-    console.log("🇨🇭 Creando torneo suizo:", nombre);
-    socket.emit('crear_torneo_suizo', {
-        nombre: nombre,
-        tiempo: tiempo,
-        rondas: rondas,
-        creador: miNick,
-        tipo: 'suizo'
-    });
-}
-
-        // ✅ MODIFICADO: Maneja la creación de ambos tipos
-        socket.on('torneo_creado', function(data) {
-            console.log("✅ Torneo creado:", data);
-            
-            localStorage.setItem('torneoActual', data.torneo_id);
-            localStorage.setItem('nombreTorneo', data.nombre);
-            localStorage.setItem('tipoTorneo', data.tipo || 'normal');
-            
-            const tiempo = data.tipo === 'suizo' ? document.getElementById('tiempoSuizoInput').value : document.getElementById('tiempoTorneoInput').value;
-            
-            localStorage.setItem('tiempoTorneo', tiempo + '+0');
-            if (data.tipo === 'suizo') {
-                localStorage.setItem('rondasSuizo', document.getElementById('rondasSuizoInput').value);
-            } else {
-                localStorage.setItem('duracionTorneo', document.getElementById('duracionTorneoInput').value * 60);
-            }
-            
-            // Mostrar mensaje de éxito
-            const contenedor = document.querySelector('.main-container');
-            const mensaje = document.createElement('div');
-            mensaje.className = 'mensaje-exito';
-            const tipoTexto = data.tipo === 'suizo' ? 'Suizo' : 'Normal';
-            mensaje.innerHTML = `✅ Torneo ${tipoTexto} "${data.nombre}" creado exitosamente. ¡Únete desde la lista de abajo!`;
-            contenedor.insertBefore(mensaje, contenedor.firstChild);
-            
-            setTimeout(() => {
-                mensaje.style.opacity = '0';
-                setTimeout(() => mensaje.remove(), 300);
-            }, 5000);
-            
-            // Limpiar formularios
-            document.getElementById('nombreTorneoInput').value = '';
-            document.getElementById('nombreSuizoInput').value = '';
-            
-            socket.emit('pedir_torneos');
+        // 🔌 CONEXIÓN Y REINTENTOS
+        socket.on('connect', function() {
+            console.log("✅ Conectado a torneos oficiales");
+            pedirListaTorneos();
         });
 
+        function pedirListaTorneos() {
+            console.log("📡 Solicitando lista de torneos...");
+            socket.emit('pedir_torneos');
+            
+            setTimeout(function() {
+                if (!listaRecibida) {
+                    intentosConexion++;
+                    if (intentosConexion <= 3) {
+                        console.log(`⏳ Reintentando conexión (${intentosConexion}/3)...`);
+                        pedirListaTorneos();
+                    } else {
+                        const contenedor = document.getElementById('listaTorneos');
+                        if (contenedor) {
+                            contenedor.innerHTML = `
+                                <p style="color:#f44336; text-align:center; padding: 20px;">
+                                    No se pudo conectar con el servidor.<br>
+                                    <button class="btn-reintentar" onclick="location.reload()">
+                                        🔄 Reintentar
+                                    </button>
+                                </p>
+                            `;
+                        }
+                    }
+                }
+            }, 3000);
+        }
+
         socket.on('lista_torneos_actualizada', function(lista) {
+            console.log("📋 Lista de torneos recibida:", lista);
+            listaRecibida = true;
+            intentosConexion = 0;
+            
             const contenedor = document.getElementById('listaTorneos');
+            const contadorElement = document.getElementById('contadorTorneos');
+            
+            if (!contenedor) return;
+            
             if (!lista || lista.length === 0) {
-                contenedor.innerHTML = '<p style="color:#888; text-align:center; padding: 20px;">No hay torneos activos en este momento</p>';
+                contenedor.innerHTML = `
+                    <p style="color:#888; text-align:center; padding: 20px;">
+                        No hay torneos activos en este momento<br>
+                        <small>Los torneos se crean automáticamente según el calendario</small>
+                    </p>
+                `;
+                if (contadorElement) contadorElement.textContent = '(0 activos)';
                 return;
             }
             
             let html = '';
             lista.forEach(t => {
-                const esSuizo = t.tipo === 'suizo';
-                const claseExtra = esSuizo ? 'suizo' : '';
-                const infoExtra = esSuizo ? `| 🔄 ${t.rondas || 5} rondas` : `| ⏱️ ${t.tiempo} min`;
-                
-                html += `
-                    <div class="torneo-item ${claseExtra}">
-                        <div class="torneo-info">
-                            <h3>${esSuizo ? '🇨🇭' : '⚡'} ${t.nombre}</h3>
-                            <p>👥 ${t.jugadores} jugadores ${infoExtra}</p>
-                        </div>
-                        <button class="btn-unirse" onclick="unirseTorneo('${t.id}', '${t.nombre}', ${t.tiempo}, '${t.tipo || 'normal'}', ${t.rondas || 0})">
-                            Unirse
-                        </button>
-                    </div>
-                `;
-            });
+    //  Filtrar: excluir solo los suizos, mostrar todo lo demás (arena o sin tipo definido)
+    if(t.tipo === 'suizo') return;
+
+    const esOficial = t.oficial ? 'oficial' : '';
+    const badgeOficial = t.oficial ? '<span class="badge-oficial">OFICIAL</span>' : '';
+    
+    const infoTiempo = `${t.tiempo} min | ${Math.floor((t.duracion || 1800) / 60)} min`;
+    
+    html += `
+        <div class="torneo-item ${esOficial}">
+            <div class="torneo-info">
+                <h3>
+                    ⚡ ${t.nombre}
+                    ${badgeOficial}
+                </h3>
+                <p>👥 ${t.jugadores} jugadores</p>
+                <p>️ ${infoTiempo}</p>
+            </div>
+            <button class="btn-unirse" onclick="unirseTorneo('${t.id}', '${t.nombre}', ${t.tiempo}, 'arena', 0)">
+                Unirse
+            </button>
+        </div>
+    `;
+});
             contenedor.innerHTML = html;
+            
+            if (contadorElement) {
+                contadorElement.textContent = `(${lista.length} activos)`;
+            }
         });
 
         function unirseTorneo(id, nombre, tiempo, tipo, rondas) {
-    console.log(" Uniéndose al torneo:", nombre, "Tipo:", tipo);
-    localStorage.setItem('torneoActual', id);
-    localStorage.setItem('nombreTorneo', nombre);
-    localStorage.setItem('tipoTorneo', tipo || 'normal');
-    localStorage.setItem('tiempoTorneo', tiempo + '+0');
-    
-    if (tipo === 'suizo') {
-        localStorage.setItem('rondasSuizo', rondas || 5);
-        window.location.href = "sala_torneo_suizo.html";
-    } else {
-        localStorage.setItem('duracionTorneo', 1800); // Valor por defecto
-        window.location.href = "sala_torneo.html";
-    }
-}
+            const miNick = localStorage.getItem('nickJugador');
+            
+            if (!miNick) {
+                alert("⚠️ Debes iniciar sesión primero");
+                window.location.href = "login.html";
+                return;
+            }
+            
+            console.log("🎯 Uniéndose al torneo:", nombre, "Tipo:", tipo);
+            
+            // ✅ CRÍTICO: Guardar todas las variables necesarias para el torneo
+            localStorage.setItem('esTorneo', 'true');
+            localStorage.setItem('torneoActual', id);
+            localStorage.setItem('nombreTorneo', nombre);
+            localStorage.setItem('tipoTorneo', tipo || 'arena');
+            localStorage.setItem('tiempoTorneo', tiempo + '+0');
+            localStorage.setItem('duracionTorneo', 1800);
+            
+            window.location.href = "sala_torneo.html";
+        }
+
+        // Solicitar lista cada 15 segundos
+        setInterval(() => {
+            socket.emit('pedir_torneos');
+        }, 15000);
     </script>
 </body>
 </html>
