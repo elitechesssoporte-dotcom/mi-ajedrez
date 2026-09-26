@@ -1893,6 +1893,43 @@ def pedir_torneos():
             })
     
     socketio.emit('lista_torneos_actualizada', lista_combinada)
+    
+def obtener_clasificacion_torneo(torneo_id):
+    """Devuelve la lista de jugadores de un torneo con sus puntos y ELO, ordenados"""
+    if torneo_id not in torneos:
+        return []
+    
+    torneo = torneos[torneo_id]
+    puntos = torneo.get('puntos', {})
+    tiempo = torneo.get('tiempo', 5)
+    
+    # Determinar categoría según el tiempo
+    categoria = 'blitz'  # Por defecto
+    if tiempo <= 2:
+        categoria = 'bullet'
+    elif tiempo <= 5:
+        categoria = 'blitz'
+    else:
+        categoria = 'rapid'
+    
+    print(f"📊 Obteniendo clasificación para torneo {torneo_id} - Categoría: {categoria} ({tiempo}min)")
+    
+    # Crear lista de jugadores con sus puntos
+    clasificacion = []
+    for jugador, pts in puntos.items():
+        # Obtener ELO de la base de datos según la categoría
+        elo = obtener_elo(jugador, categoria)
+        clasificacion.append({
+            'nick': jugador,
+            'puntos': pts,
+            'elo': elo
+        })
+        print(f"   - {jugador}: {pts} pts, ELO {categoria}: {elo}")
+    
+    # Ordenar por puntos (descendente)
+    clasificacion.sort(key=lambda x: x['puntos'], reverse=True)
+    
+    return clasificacion
 
 @socketio.on('unirse_torneo')
 def unirse_torneo(data):
@@ -2297,13 +2334,33 @@ def iniciar_torneo_suizo(data):
         return
     
     torneo = torneos_suizos[torneo_id]
+    num_jugadores = len(torneo['jugadores'])
     
-    if len(torneo['jugadores']) < 2:
-        print(f"⚠️ Se necesitan al menos 2 jugadores")
+    # 🛑 VALIDACIÓN MÍNIMA ABSOLUTA
+    if num_jugadores < 2:
+        socketio.emit('error_torneo', {
+            'mensaje': 'Se necesitan al menos 2 jugadores para iniciar.'
+        }, room=request.sid)
         return
+
+    # 🧠 LÓGICA INTELIGENTE: Ajustar rondas según los jugadores
+    rondas_solicitadas = torneo.get('rondas', 5)
+    max_rondas_posibles = num_jugadores - 1
     
-    print(f" Iniciando torneo suizo {torneo['nombre']} - Ronda 1")
-    torneo['activo'] = False  # Ya no se pueden unir más
+    if rondas_solicitadas > max_rondas_posibles:
+        print(f"⚠️ Ajuste automático: El torneo tenía {rondas_solicitadas} rondas, pero con {num_jugadores} jugadores se reduce a {max_rondas_posibles} rondas para evitar repetir rivales.")
+        torneo['rondas'] = max_rondas_posibles
+        
+        # Avisar a todos los jugadores del ajuste
+        for jugador in torneo['jugadores']:
+            sid = usuarios_conectados.get(jugador)
+            if sid:
+                socketio.emit('aviso_torneo', {
+                    'mensaje': f'ℹ️ Con {num_jugadores} jugadores, el torneo se ha ajustado automáticamente a {max_rondas_posibles} rondas para garantizar que nadie repita rival.'
+                }, room=sid)
+
+    print(f"🚀 Iniciando torneo suizo: {torneo['nombre']} - {torneo['rondas']} rondas con {num_jugadores} jugadores")
+    torneo['activo'] = False  # Cierra el registro
     
     # Generar emparejamientos de la ronda 1
     generar_ronda_suiza(torneo_id)
@@ -2535,6 +2592,254 @@ def finalizar_torneo_suizo(torneo_id):
         'torneo_id': torneo_id,
         'clasificacion': clasificacion
     }, broadcast=True)
+    
+   # ==========================================
+# 🤖 SISTEMA DE TORNEOS AUTOMATIZADOS (MULTI-HORARIO)
+# ==========================================
+
+def crear_torneo_automatico(tipo, nombre, tiempo, incremento=0, duracion=3600, rondas=5):
+    """Crea un torneo automático con los parámetros especificados"""
+    
+    if tipo == 'arena':
+        torneo_id = str(uuid.uuid4())[:8]
+        
+        torneos[torneo_id] = {
+            'id': torneo_id,
+            'nombre': nombre,
+            'tiempo': tiempo,
+            'incremento': incremento,
+            'duracion': duracion,
+            'creador': 'Sistema',
+            'oficial': True,
+            'jugadores': [],
+            'puntos': {},
+            'activo': True,
+            'hora_inicio': time.time(),
+            'tipo': 'arena'
+        }
+        print(f"✅ Torneo Arena creado: {nombre}")
+        socketio.emit('lista_torneos_actualizada', obtener_lista_torneos())
+        return torneo_id
+        
+    elif tipo == 'suizo':
+        torneo_id = str(uuid.uuid4())[:8]
+        
+        torneos_suizos[torneo_id] = {
+            'id': torneo_id,
+            'nombre': nombre,
+            'tiempo': tiempo,
+            'rondas': rondas,
+            'ronda_actual': 1,
+            'creador': 'Sistema',
+            'oficial': True,
+            'jugadores': [],
+            'puntos': {},
+            'historial_colores': {},
+            'historial_rivales': {},
+            'activo': True,
+            'creado_en': time.time(),
+            'finalizado': False,
+            'tipo': 'suizo'
+        }
+        emparejamientos_suizos[torneo_id] = {}
+        print(f"✅ Torneo Suizo creado: {nombre}")
+        socketio.emit('lista_torneos_actualizada', obtener_lista_torneos())
+        return torneo_id
+
+def programar_torneos_del_dia(dia_semana):
+    """Crea todos los torneos del día según el horario"""
+    
+    # Configuración de torneos Arena por día y hora
+    horario_arena = {
+        'lunes': {
+            18: {'tiempo': 3, 'incremento': 0, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Lunes (3+0)'}
+        },
+        'martes': {
+            18: {'tiempo': 5, 'incremento': 0, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Martes (5+0)'}
+        },
+        'miercoles': {
+            18: {'tiempo': 1, 'incremento': 0, 'duracion': 3600, 'nombre': ' Arena Bullet Miércoles (1+0)'}
+        },
+        'jueves': {
+            18: {'tiempo': 10, 'incremento': 0, 'duracion': 5400, 'nombre': '🏆 Arena Rapid Jueves (10+0)'}
+        },
+        'viernes': {
+            18: {'tiempo': 2, 'incremento': 1, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Viernes (2+1)'}
+        },
+        'sabado': {
+            10: {'tiempo': 1, 'incremento': 0, 'duracion': 1800, 'nombre': '🏆 Arena Bullet Sábado Mañana (1+0)'},
+            12: {'tiempo': 3, 'incremento': 0, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Sábado Mediodía (3+0)'},
+            16: {'tiempo': 5, 'incremento': 3, 'duracion': 3600, 'nombre': ' Arena Blitz Sábado Tarde (5+3)'},
+            18: {'tiempo': 10, 'incremento': 0, 'duracion': 5400, 'nombre': '🏆 Arena Rapid Sábado (10+0)'},
+            20: {'tiempo': 15, 'incremento': 10, 'duracion': 7200, 'nombre': '🏆 Arena Rapid Largo Sábado (15+10)'},
+            22: {'tiempo': 3, 'incremento': 2, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Sábado Noche (3+2)'}
+        },
+        'domingo': {
+            10: {'tiempo': 2, 'incremento': 1, 'duracion': 1800, 'nombre': '🏆 Arena Blitz Domingo Mañana (2+1)'},
+            12: {'tiempo': 5, 'incremento': 0, 'duracion': 3600, 'nombre': ' Arena Blitz Domingo Mediodía (5+0)'},
+            16: {'tiempo': 5, 'incremento': 5, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Relax Domingo (5+5)'},
+            18: {'tiempo': 10, 'incremento': 5, 'duracion': 5400, 'nombre': '🏆 Arena Rapid Relax Domingo (10+5)'},
+            20: {'tiempo': 15, 'incremento': 10, 'duracion': 7200, 'nombre': '🏆 Arena Rapid Largo Domingo (15+10)'},
+            22: {'tiempo': 3, 'incremento': 0, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Domingo Noche (3+0)'}
+        }
+    }
+    
+    # Configuración de torneos Suizos por día y hora
+    horario_suizos = {
+        'lunes': {
+            20: {'tiempo': 1, 'rondas': 5, 'nombre': '🇭 Suizo Bullet Lunes (1 min)'}
+        },
+        'martes': {
+            20: {'tiempo': 2, 'rondas': 5, 'nombre': '🇨🇭 Suizo Bullet Martes (2 min)'}
+        },
+        'miercoles': {
+            20: {'tiempo': 3, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Miércoles (3 min)'}
+        },
+        'jueves': {
+            20: {'tiempo': 5, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Jueves (5 min)'}
+        },
+        'viernes': {
+            20: {'tiempo': 10, 'rondas': 5, 'nombre': '🇨🇭 Suizo Rapid Viernes (10 min)'}
+        },
+        'sabado': {
+            12: {'tiempo': 1, 'rondas': 5, 'nombre': '🇭 Suizo Bullet Sábado (1 min)'},
+            18: {'tiempo': 3, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Sábado (3 min)'},
+            20: {'tiempo': 5, 'rondas': 5, 'nombre': '🇨 Suizo Blitz Sábado Tarde (5 min)'}
+        },
+        'domingo': {
+            12: {'tiempo': 2, 'rondas': 5, 'nombre': '🇨🇭 Suizo Bullet Domingo (2 min)'},
+            18: {'tiempo': 5, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Domingo (5 min)'},
+            20: {'tiempo': 3, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Domingo Noche (3 min)'}
+        }
+    }
+    
+    print(f" Programando torneos para: {dia_semana.upper()}")
+    
+    # Crear torneos Arena del día
+    if dia_semana in horario_arena:
+        for hora, config in horario_arena[dia_semana].items():
+            crear_torneo_automatico(
+                'arena',
+                config['nombre'],
+                config['tiempo'],
+                config.get('incremento', 0),
+                config['duracion']
+            )
+    
+    # Crear torneos Suizos del día
+    if dia_semana in horario_suizos:
+        for hora, config in horario_suizos[dia_semana].items():
+            crear_torneo_automatico(
+                'suizo',
+                config['nombre'],
+                config['tiempo'],
+                0,
+                3600,
+                config['rondas']
+            )
+
+def scheduler_torneos():
+    """Hilo que verifica cada minuto si hay que crear torneos"""
+    import time
+    from datetime import datetime
+    
+    dias_semana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+    torneos_creados_hoy = set()  # Para evitar duplicados
+    
+    while True:
+        ahora = datetime.now()
+        dia_actual = dias_semana[ahora.weekday()]
+        hora_actual = ahora.hour
+        clave_hoy = f"{ahora.strftime('%Y-%m-%d')}_{dia_actual}"
+        
+        # Si es un nuevo día, resetear el registro
+        if clave_hoy not in torneos_creados_hoy:
+            print(f"🌅 Nuevo día detectado: {dia_actual}")
+            torneos_creados_hoy.clear()
+            torneos_creados_hoy.add(clave_hoy)
+        
+        # Verificar si ya creamos los torneos de esta hora
+        clave_hora = f"{clave_hoy}_{hora_actual}"
+        
+        if clave_hora not in torneos_creados_hoy:
+            # Crear torneos para esta hora específica
+            crear_torneos_hora(dia_actual, hora_actual)
+            torneos_creados_hoy.add(clave_hora)
+        
+        time.sleep(60)  # Verificar cada minuto
+
+def crear_torneos_hora(dia_semana, hora):
+    """Crea los torneos programados para una hora específica"""
+    
+    # Horarios Arena
+    horario_arena = {
+        'lunes': {18: {'tiempo': 3, 'incremento': 0, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Lunes (3+0)'}},
+        'martes': {18: {'tiempo': 5, 'incremento': 0, 'duracion': 3600, 'nombre': ' Arena Blitz Martes (5+0)'}},
+        'miercoles': {18: {'tiempo': 1, 'incremento': 0, 'duracion': 3600, 'nombre': '🏆 Arena Bullet Miércoles (1+0)'}},
+        'jueves': {18: {'tiempo': 10, 'incremento': 0, 'duracion': 5400, 'nombre': '🏆 Arena Rapid Jueves (10+0)'}},
+        'viernes': {18: {'tiempo': 2, 'incremento': 1, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Viernes (2+1)'}},
+        'sabado': {
+            10: {'tiempo': 1, 'incremento': 0, 'duracion': 1800, 'nombre': ' Arena Bullet Sábado Mañana (1+0)'},
+            12: {'tiempo': 3, 'incremento': 0, 'duracion': 3600, 'nombre': ' Arena Blitz Sábado Mediodía (3+0)'},
+            16: {'tiempo': 5, 'incremento': 3, 'duracion': 3600, 'nombre': ' Arena Blitz Sábado Tarde (5+3)'},
+            18: {'tiempo': 10, 'incremento': 0, 'duracion': 5400, 'nombre': '🏆 Arena Rapid Sábado (10+0)'},
+            20: {'tiempo': 15, 'incremento': 10, 'duracion': 7200, 'nombre': '🏆 Arena Rapid Largo Sábado (15+10)'},
+            22: {'tiempo': 3, 'incremento': 2, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Sábado Noche (3+2)'}
+        },
+        'domingo': {
+            10: {'tiempo': 2, 'incremento': 1, 'duracion': 1800, 'nombre': '🏆 Arena Blitz Domingo Mañana (2+1)'},
+            12: {'tiempo': 5, 'incremento': 0, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Domingo Mediodía (5+0)'},
+            16: {'tiempo': 5, 'incremento': 5, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Relax Domingo (5+5)'},
+            18: {'tiempo': 10, 'incremento': 5, 'duracion': 5400, 'nombre': '🏆 Arena Rapid Relax Domingo (10+5)'},
+            20: {'tiempo': 15, 'incremento': 10, 'duracion': 7200, 'nombre': '🏆 Arena Rapid Largo Domingo (15+10)'},
+            22: {'tiempo': 3, 'incremento': 0, 'duracion': 3600, 'nombre': '🏆 Arena Blitz Domingo Noche (3+0)'}
+        }
+    }
+    
+    # Horarios Suizos
+    horario_suizos = {
+        'lunes': {20: {'tiempo': 1, 'rondas': 5, 'nombre': '🇭 Suizo Bullet Lunes (1 min)'}},
+        'martes': {20: {'tiempo': 2, 'rondas': 5, 'nombre': '🇨🇭 Suizo Bullet Martes (2 min)'}},
+        'miercoles': {20: {'tiempo': 3, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Miércoles (3 min)'}},
+        'jueves': {20: {'tiempo': 5, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Jueves (5 min)'}},
+        'viernes': {20: {'tiempo': 10, 'rondas': 5, 'nombre': '🇨🇭 Suizo Rapid Viernes (10 min)'}},
+        'sabado': {
+            12: {'tiempo': 1, 'rondas': 5, 'nombre': '🇨🇭 Suizo Bullet Sábado (1 min)'},
+            18: {'tiempo': 3, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Sábado (3 min)'},
+            20: {'tiempo': 5, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Sábado Tarde (5 min)'}
+        },
+        'domingo': {
+            12: {'tiempo': 2, 'rondas': 5, 'nombre': '🇨🇭 Suizo Bullet Domingo (2 min)'},
+            18: {'tiempo': 5, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Domingo (5 min)'},
+            20: {'tiempo': 3, 'rondas': 5, 'nombre': '🇨🇭 Suizo Blitz Domingo Noche (3 min)'}
+        }
+    }
+    
+    # Crear torneo Arena si hay uno programado para esta hora
+    if dia_semana in horario_arena and hora in horario_arena[dia_semana]:
+        config = horario_arena[dia_semana][hora]
+        crear_torneo_automatico(
+            'arena',
+            config['nombre'],
+            config['tiempo'],
+            config.get('incremento', 0),
+            config['duracion']
+        )
+    
+    # Crear torneo Suizo si hay uno programado para esta hora
+    if dia_semana in horario_suizos and hora in horario_suizos[dia_semana]:
+        config = horario_suizos[dia_semana][hora]
+        crear_torneo_automatico(
+            'suizo',
+            config['nombre'],
+            config['tiempo'],
+            0,
+            3600,
+            config['rondas']
+        )
+
+# Iniciar el scheduler al arrancar el servidor
+threading.Thread(target=scheduler_torneos, daemon=True).start()
 # --- INICIAR SERVIDOR ---
 if __name__ == '__main__':
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
