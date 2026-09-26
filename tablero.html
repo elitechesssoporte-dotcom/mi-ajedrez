@@ -1419,6 +1419,13 @@ socket.on('partida_finalizada', function(data) {
         }
     }
     document.getElementById('btnSalir').disabled = false;
+	// 🆕 Asegurar que el texto sea correcto al finalizar
+    const btnSalirFinal = document.getElementById('btnSalir');
+    if (localStorage.getItem('esTorneo') === 'true') {
+        btnSalirFinal.innerHTML = '🏆 Volver a la Sala del Torneo';
+    } else {
+        btnSalirFinal.innerHTML = '🏠 Salir al Menú Principal';
+    }
     manejarFinalDePartidaUI();
     
     var resultado = '';
@@ -1432,19 +1439,29 @@ socket.on('partida_finalizada', function(data) {
         resultado = '1/2-1/2';
     }
     
-    if (resultado) {
+        if (resultado) {
         anadirResultadoANotacion(resultado);
     }
-	// 🧹 LIMPIEZA DEL CLIENTE: Borrar datos de la sala después de 5 segundos
+
+    // 🧹 LIMPIEZA INTELIGENTE: Solo borra datos de la partida, NO los del torneo
     setTimeout(function() {
-        console.log('🧹 Limpiando localStorage de la partida finalizada');
+        console.log('🧹 Limpiando datos de la partida (respetando torneo)');
         localStorage.removeItem('salaId');
         localStorage.removeItem('miColor');
         localStorage.removeItem('rivalNick');
-        localStorage.removeItem('esTorneo');
-        localStorage.removeItem('torneoActual');
-    }, 5000); // 5 segundos para que el usuario pueda ver el resultado y pedir revancha si quiere
-});
+        localStorage.removeItem('tiempoPartida');
+        localStorage.removeItem('incrementoPartida');
+        localStorage.removeItem('colorElegido');
+        localStorage.removeItem('miElo');
+        localStorage.removeItem('rivalElo');
+        
+        console.log('📊 Datos de torneo conservados:', {
+            esTorneo: localStorage.getItem('esTorneo'),
+            torneoActual: localStorage.getItem('torneoActual'),
+            tipoTorneo: localStorage.getItem('tipoTorneo')
+        });
+    }, 5000);
+}); // <--- ¡AQUÍ ESTABA EL ERROR! Faltaba cerrar el socket.on('partida_finalizada')
 
 socket.on('sesion_cerrada', function(data) {
     alert(data.mensaje);
@@ -1996,29 +2013,32 @@ function ofrecerRevancha() {
 	function salirAlMenu() {
     const esTorneo = localStorage.getItem('esTorneo');
     const torneoId = localStorage.getItem('torneoActual');
-    const salaId = localStorage.getItem('salaId');
     
-    console.log('🔍 DEBUG - Es torneo:', esTorneo, '| Torneo ID:', torneoId, '| Sala ID:', salaId);
+    console.log('🔍 DEBUG - Es torneo:', esTorneo, '| Torneo ID:', torneoId);
     
+    // Limpiar datos de la partida actual
     localStorage.removeItem('salaId');
     localStorage.removeItem('miColor');
     localStorage.removeItem('rivalNick');
     localStorage.removeItem('tiempoPartida');
     localStorage.removeItem('incrementoPartida');
-    localStorage.removeItem('colorElegido');
-    localStorage.removeItem('miElo');
-    localStorage.removeItem('rivalElo');
     
+    // ✅ Si es torneo, volver a la sala del torneo, NO a configuración
     if (esTorneo === 'true' && torneoId && torneoId.trim() !== '') {
-        console.log('🏆 Volviendo a la sala del torneo:', torneoId);
-        window.location.href = 'sala_torneo.html';
+        const tipoTorneo = localStorage.getItem('tipoTorneo');
+        if (tipoTorneo === 'suizo') {
+            window.location.href = 'sala_torneo_suizo.html';
+        } else {
+            window.location.href = 'sala_torneo.html';
+        }
     } else {
-        console.log('🏠 Volviendo a configuración (partida normal o torneo inválido)');
+        // Si no es torneo, limpiar todo y ir a configuración
         localStorage.removeItem('esTorneo');
         localStorage.removeItem('torneoActual');
         localStorage.removeItem('nombreTorneo');
         localStorage.removeItem('tiempoTorneo');
         localStorage.removeItem('duracionTorneo');
+        localStorage.removeItem('rondasSuizo');
         window.location.href = 'configuracion.html';
     }
 }
@@ -2122,6 +2142,14 @@ function habilitarBotonesPartida() {
     
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM cargado');
+    
+    // 🆕 CAMBIO: Actualizar el texto del botón de salida según el contexto
+    const btnSalir = document.getElementById('btnSalir');
+    if (localStorage.getItem('esTorneo') === 'true') {
+        btnSalir.innerHTML = '🏆 Volver a la Sala del Torneo';
+    } else {
+        btnSalir.innerHTML = '🏠 Salir al Menú Principal';
+    }
     
     //  Detectar si es dispositivo táctil/móvil
     var esMovil = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -2324,7 +2352,3 @@ function actualizarBotonCancelar() {
 
 </body>
 </html>
-
-</body>
-</html>
-
