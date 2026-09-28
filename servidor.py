@@ -2738,6 +2738,39 @@ def programar_torneos_del_dia(dia_semana):
                 config['rondas']
             )
 
+def limpiar_torneos_expirados():
+    """Revisa y desactiva los torneos que ya han superado su duración"""
+    ahora = time.time()
+    torneos_limpiados = 0
+    
+    # Limpiar torneos Arena
+    for torneo_id, torneo in list(torneos.items()):
+        if torneo.get('activo', False):
+            hora_inicio = torneo.get('hora_inicio', 0)
+            duracion = torneo.get('duracion', 1800)  # Por defecto 30 min
+            
+            # Si ya pasó su duración, desactivarlo
+            if ahora > hora_inicio + duracion:
+                torneo['activo'] = False
+                print(f"🧹 Torneo Arena expirado: {torneo['nombre']}")
+                torneos_limpiados += 1
+    
+    # Limpiar torneos Suizos (si los vuelves a activar en el futuro)
+    for torneo_id, torneo in list(torneos_suizos.items()):
+        if torneo.get('activo', False):
+            hora_creacion = torneo.get('creado_en', 0)
+            duracion_estimada = 3600  # 1 hora por defecto
+            
+            if ahora > hora_creacion + duracion_estimada:
+                torneo['activo'] = False
+                print(f"🧹 Torneo Suizo expirado: {torneo['nombre']}")
+                torneos_limpiados += 1
+    
+    if torneos_limpiados > 0:
+        print(f"✅ Total torneos limpiados: {torneos_limpiados}")
+        # Avisar a los clientes para que actualicen la lista
+        socketio.emit('lista_torneos_actualizada', obtener_lista_torneos())
+        
 def scheduler_torneos():
     """Hilo que verifica cada minuto si hay que crear torneos"""
     import time
@@ -2745,6 +2778,7 @@ def scheduler_torneos():
     
     dias_semana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
     torneos_creados_hoy = set()  # Para evitar duplicados
+    ultima_limpieza = 0  # 🆕 AÑADIDO: Para controlar cuándo limpiar torneos expirados
     
     while True:
         ahora = datetime.now()
@@ -2765,6 +2799,16 @@ def scheduler_torneos():
             # Crear torneos para esta hora específica
             crear_torneos_hora(dia_actual, hora_actual)
             torneos_creados_hoy.add(clave_hora)
+        
+        #  LIMPIEZA: Cada 5 minutos (300 segundos) desactivar torneos expirados
+        tiempo_actual = time.time()
+        if tiempo_actual - ultima_limpieza > 300:
+            for tid in list(torneos.keys()):
+                t = torneos[tid]
+                if t.get('activo') and tiempo_actual > t.get('hora_inicio', 0) + t.get('duracion', 1800):
+                    t['activo'] = False
+                    print(f"🧹 Torneo expirado: {t['nombre']}")
+            ultima_limpieza = tiempo_actual
         
         time.sleep(60)  # Verificar cada minuto
 
