@@ -306,7 +306,7 @@ def handle_connect(auth=None):  # 🆕 Añadido 'auth=None' para evitar el error
 def handle_disconnect(reason=None):
     global usuarios_conectados, cola_espera, partidas_activas, temporizadores_reconexion
     jugador_id = request.sid
-    print(f" Jugador {jugador_id} desconectado")
+    print(f"🔌 Jugador {jugador_id} desconectado")
     
     if jugador_id in sids_activos:
         del sids_activos[jugador_id]
@@ -329,6 +329,9 @@ def handle_disconnect(reason=None):
     else:
         print(f"   ❌ NO se encontró sala (no está en partida)")
     
+    # ==========================================
+    # CASO 1: El jugador estaba en una partida activa
+    # ==========================================
     if sala_id and sala_id in salas and not salas[sala_id].get('partida_terminada', False):
         print(f"⚠️ {nick_desconectado} desconectado durante partida en {sala_id}")
         
@@ -347,12 +350,10 @@ def handle_disconnect(reason=None):
         
         sid_blanco = usuarios_conectados.get(nb)
         sid_negro = usuarios_conectados.get(nn)
-        
         otro_jugador_sid = sid_negro if nick_desconectado == nb else sid_blanco
         
         if num_desconexiones >= 2:
             print(f"   ❌ {nick_desconectado} ha superado el límite de desconexiones. Pierde la partida.")
-            
             salas[sala_id]['partida_terminada'] = True
             if 'desconectado' in salas[sala_id]:
                 del salas[sala_id]['desconectado']
@@ -361,146 +362,93 @@ def handle_disconnect(reason=None):
             try:
                 tiempo_partida = sala.get('tiempo', 5)
                 categoria = obtener_categoria(tiempo_partida)
-                
                 eb = obtener_elo(nb, categoria)
                 en = obtener_elo(nn, categoria)
                 
-                if salas[sala_id].get('estadisticas_actualizadas', False):
-                    print(f"⚠️ Estadísticas ya actualizadas para {sala_id}, omitiendo...")
-                else:
+                if not salas[sala_id].get('estadisticas_actualizadas', False):
                     if ganador == 'blanco':
-                        neb = calcular_elo(eb, en, 'victoria')
-                        nen = calcular_elo(en, eb, 'derrota')
                         actualizar_estadisticas_db(nb, 'victoria', categoria)
                         actualizar_estadisticas_db(nn, 'derrota', categoria)
                     else:
-                        neb = calcular_elo(eb, en, 'derrota')
-                        nen = calcular_elo(en, eb, 'victoria')
                         actualizar_estadisticas_db(nb, 'derrota', categoria)
                         actualizar_estadisticas_db(nn, 'victoria', categoria)
                     salas[sala_id]['estadisticas_actualizadas'] = True
                 
-                actualizar_elo_db(nb, neb, categoria)
-                actualizar_elo_db(nn, nen, categoria)
+                actualizar_elo_db(nb, calcular_elo(eb, en, 'victoria' if ganador=='blanco' else 'derrota'), categoria)
+                actualizar_elo_db(nn, calcular_elo(en, eb, 'victoria' if ganador=='negro' else 'derrota'), categoria)
                 
-                datos_final = {
-                    'motivo': 'desconexion_repetida',
-                    'ganador': ganador,
-                    'elo_blanco': neb,
-                    'elo_negro': nen
-                }
+                datos_final = {'motivo': 'desconexion_repetida', 'ganador': ganador, 'elo_blanco': eb, 'elo_negro': en}
                 socketio.emit('partida_finalizada', datos_final, room=sala_id)
-                
                 if otro_jugador_sid and otro_jugador_sid in sids_activos:
                     socketio.emit('partida_finalizada', datos_final, room=otro_jugador_sid)
-                
             except Exception as e:
                 print(f"❌ Error al finalizar por desconexión repetida: {e}")
             
-            if clave_desconexion in desconexiones_por_jugador:
-                del desconexiones_por_jugador[clave_desconexion]
-            if nick_desconectado in temporizadores_reconexion:
-                del temporizadores_reconexion[nick_desconectado]
-            if jugador_id in partidas_activas:
-                del partidas_activas[jugador_id]
-            if nick_desconectado in partidas_activas:
-                del partidas_activas[nick_desconectado]
-            if nick_desconectado in usuarios_conectados:
-                del usuarios_conectados[nick_desconectado]
-            if jugador_id in sids_activos:
-                del sids_activos[jugador_id]
-            
+            if clave_desconexion in desconexiones_por_jugador: del desconexiones_por_jugador[clave_desconexion]
+            if nick_desconectado in temporizadores_reconexion: del temporizadores_reconexion[nick_desconectado]
+            if jugador_id in partidas_activas: del partidas_activas[jugador_id]
+            if nick_desconectado in partidas_activas: del partidas_activas[nick_desconectado]
+            if nick_desconectado in usuarios_conectados: del usuarios_conectados[nick_desconectado]
+            if jugador_id in sids_activos: del sids_activos[jugador_id]
             print(f"   ✅ Partida finalizada por desconexión repetida")
             return
         
-        print(f"    Primera desconexión - Iniciando timer de 45s")
-        
+        print(f"   ⏱️ Primera desconexión - Iniciando timer de 60s")
         if otro_jugador_sid and otro_jugador_sid in sids_activos:
-            print(f"   🔔 Notificando a {otro_jugador_sid}")
-            emit('rival_desconectado', {
-                'mensaje': 'Tu oponente se ha desconectado. Esperando reconexión (60 segundos)...'
-            }, room=otro_jugador_sid)
+            emit('rival_desconectado', {'mensaje': 'Tu oponente se ha desconectado. Esperando reconexión (60 segundos)...'}, room=otro_jugador_sid)
         
         def timeout_reconexion():
             print(f"⏰ EJECUTANDO timeout para {nick_desconectado} en sala {sala_id}")
-            
             if sala_id in salas and not salas[sala_id].get('partida_terminada', False):
                 salas[sala_id]['partida_terminada'] = True
-                if 'desconectado' in salas[sala_id]:
-                    del salas[sala_id]['desconectado']
-                
+                if 'desconectado' in salas[sala_id]: del salas[sala_id]['desconectado']
                 ganador = 'negro' if nick_desconectado == nb else 'blanco'
-                
                 try:
                     tiempo_partida = sala.get('tiempo', 5)
                     categoria = obtener_categoria(tiempo_partida)
-                    
                     eb = obtener_elo(nb, categoria)
                     en = obtener_elo(nn, categoria)
-                    
-                    if salas[sala_id].get('estadisticas_actualizadas', False):
-                        print(f"⚠️ Estadísticas ya actualizadas para {sala_id}, omitiendo...")
-                    else:
+                    if not salas[sala_id].get('estadisticas_actualizadas', False):
                         if ganador == 'blanco':
-                            neb = calcular_elo(eb, en, 'victoria')
-                            nen = calcular_elo(en, eb, 'derrota')
                             actualizar_estadisticas_db(nb, 'victoria', categoria)
                             actualizar_estadisticas_db(nn, 'derrota', categoria)
                         else:
-                            neb = calcular_elo(eb, en, 'derrota')
-                            nen = calcular_elo(en, eb, 'victoria')
                             actualizar_estadisticas_db(nb, 'derrota', categoria)
                             actualizar_estadisticas_db(nn, 'victoria', categoria)
                         salas[sala_id]['estadisticas_actualizadas'] = True
-                    
-                    actualizar_elo_db(nb, neb, categoria)
-                    actualizar_elo_db(nn, nen, categoria)
-                    
-                    datos_final = {
-                        'motivo': 'desconexion',
-                        'ganador': ganador,
-                        'elo_blanco': neb,
-                        'elo_negro': nen
-                    }
+                    actualizar_elo_db(nb, calcular_elo(eb, en, 'victoria' if ganador=='blanco' else 'derrota'), categoria)
+                    actualizar_elo_db(nn, calcular_elo(en, eb, 'victoria' if ganador=='negro' else 'derrota'), categoria)
+                    datos_final = {'motivo': 'desconexion', 'ganador': ganador, 'elo_blanco': eb, 'elo_negro': en}
                     socketio.emit('partida_finalizada', datos_final, room=sala_id)
-                    
                     if otro_jugador_sid and otro_jugador_sid in sids_activos:
                         socketio.emit('partida_finalizada', datos_final, room=otro_jugador_sid)
-                    
                 except Exception as e:
                     print(f"❌ Error timeout: {e}")
                 
-                if clave_desconexion in desconexiones_por_jugador:
-                    del desconexiones_por_jugador[clave_desconexion]
-                if nick_desconectado in temporizadores_reconexion:
-                    del temporizadores_reconexion[nick_desconectado]
-                if jugador_id in partidas_activas:
-                    del partidas_activas[jugador_id]
-                if nick_desconectado in partidas_activas:
-                    del partidas_activas[nick_desconectado]
-                if nick_desconectado in usuarios_conectados:
-                    del usuarios_conectados[nick_desconectado]
-                if jugador_id in sids_activos:
-                    del sids_activos[jugador_id]
-                
+                if clave_desconexion in desconexiones_por_jugador: del desconexiones_por_jugador[clave_desconexion]
+                if nick_desconectado in temporizadores_reconexion: del temporizadores_reconexion[nick_desconectado]
+                if jugador_id in partidas_activas: del partidas_activas[jugador_id]
+                if nick_desconectado in partidas_activas: del partidas_activas[nick_desconectado]
+                if nick_desconectado in usuarios_conectados: del usuarios_conectados[nick_desconectado]
+                if jugador_id in sids_activos: del sids_activos[jugador_id]
                 print(f"   ✅ Limpieza completada")
         
         timer = threading.Timer(60, timeout_reconexion)
         timer.daemon = True
         timer.start()
-        
         if nick_desconectado:
             temporizadores_reconexion[nick_desconectado] = timer
-            print(f"    Temporizador guardado para {nick_desconectado}")
-        
-        print(f"⏳ Temporizador 45s iniciado para {nick_desconectado}")
+        print(f"⏳ Temporizador 60s iniciado para {nick_desconectado}")
         return
 
-    print(f" Liberando sesión normal (no estaba en partida)")
+    # ==========================================
+        # ==========================================
+    # CASO 2: El jugador NO estaba en partida (estaba en sala de torneo, menú, etc.)
+    # ==========================================
+    print(f"🧹 Liberando sesión normal de {nick_desconectado} (no estaba en partida)")
     
     if nick_desconectado and nick_desconectado in usuarios_conectados:
         del usuarios_conectados[nick_desconectado]
-        print(f"   🗑️ {nick_desconectado} eliminado de usuarios_conectados")
     
     cola_espera = [j for j in cola_espera if j['id'] != jugador_id]
     
@@ -509,34 +457,15 @@ def handle_disconnect(reason=None):
     if nick_desconectado and nick_desconectado in partidas_activas:
         del partidas_activas[nick_desconectado]
     
-        print(f"   ✅ Sesión liberada correctamente")
-    
-    # 🆕 Añade esta línea al final de la función handle_disconnect (mismo nivel de indentación que el print de arriba)
-        #  NUEVO: Eliminar jugador de todos los torneos activos
-        # 🆕 CORREGIDO: Limpieza de torneos al desconectar
-
-        # 🆕 CORREGIDO Y SEGURO: Limpieza de torneos al desconectar
-        #  CORREGIDO Y SEGURO: Limpieza de torneos al desconectar
+    # 🛡️ FIX: NO borramos al jugador del torneo ni sus puntos al desconectarse.
+    # Esto evita que los puntos se pierdan por micro-cortes o al recargar la página.
     if nick_desconectado:
-        for torneo_id, torneo in torneos.items():
-            # 1. Sacarlo de la cola de búsqueda para que no lo emparejen mientras está offline
-            if torneo_id in colas_torneo and nick_desconectado in colas_torneo[torneo_id]:
-                colas_torneo[torneo_id].remove(nick_desconectado)
-                print(f"🗑️ {nick_desconectado} sacado de la cola del torneo {torneo['nombre']} por desconexión")
-            
-            # 2. IMPORTANTE: NO eliminamos al jugador de torneo['jugadores'] ni borramos sus puntos.
-            # Una desconexión no debe expulsarlo del torneo. Conservará sus puntos y podrá
-            # reconectar para seguir jugando donde lo dejó.
-            print(f" {nick_desconectado} mantiene su lugar en el torneo {torneo['nombre']} (está en partida)")
-        
-        # Notificar a los demás jugadores del torneo
-        for jugador_sid in list(sids_activos):
-            try:
-                emit('clasificacion_torneo', obtener_clasificacion_torneo(torneo_id), room=jugador_sid)
-            except:
-                pass
-
-    #  Actualizar contador de usuarios
+        print(f"   ✅ Puntos de {nick_desconectado} conservados en torneos activos por si se reconecta.")
+    
+    if jugador_id in sids_activos:
+        del sids_activos[jugador_id]
+    
+    print(f"   ✅ Sesión liberada correctamente")
     emit('actualizar_contador', len(sids_activos), broadcast=True)
     
 @socketio.on('registro')
@@ -1446,57 +1375,51 @@ def fin_partida(data):
     print(f"✅ Partida finalizada en sala {sala_id} - Motivo: {motivo} - Ganador: {ganador}")
     
     # 8. ✅ CORREGIDO: Actualizar puntos del torneo según el resultado REAL
+        # 8. ✅ ACTUALIZAR PUNTOS DEL TORNEO CON RED DE SEGURIDAD
     if sala_id in partidas_torneo_activas:
         partida_torneo = partidas_torneo_activas[sala_id]
         torneo_id = partida_torneo['torneo_id']
         
         if torneo_id in torneos:
             torneo = torneos[torneo_id]
-            
-            # Determinar quién es jugador1 y jugador2 según el color
             j1 = partida_torneo['jugador1']
             j2 = partida_torneo['jugador2']
             
+            # 🛡️ RED DE SEGURIDAD: Asegurar que ambos existen en el torneo
+            for j in [j1, j2]:
+                if j not in torneo['jugadores']:
+                    torneo['jugadores'].append(j)
+                if j not in torneo['puntos']:
+                    torneo['puntos'][j] = 0
+            
             if ganador == 'blanco':
-                # Blanco gana: +2 al blanco, +0 al negro
                 if partida_torneo.get('color1') == 'white':
-                    torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 2
-                    torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 0
-                    print(f"🏆 {j1} (blanco) gana +2 pts, {j2} (negro) +0 pts")
+                    torneo['puntos'][j1] += 2
                 else:
-                    torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 0
-                    torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 2
-                    print(f"🏆 {j2} (blanco) gana +2 pts, {j1} (negro) +0 pts")
+                    torneo['puntos'][j2] += 2
+                print(f"🏆 Victoria blancas: +2 pts")
                     
             elif ganador == 'negro':
-                # Negro gana: +0 al blanco, +2 al negro
                 if partida_torneo.get('color1') == 'white':
-                    torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 0
-                    torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 2
-                    print(f"🏆 {j2} (negro) gana +2 pts, {j1} (blanco) +0 pts")
+                    torneo['puntos'][j2] += 2
                 else:
-                    torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 2
-                    torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 0
-                    print(f"🏆 {j1} (negro) gana +2 pts, {j2} (blanco) +0 pts")
+                    torneo['puntos'][j1] += 2
+                print(f"🏆 Victoria negras: +2 pts")
                     
-            else:
-                # Tablas: +1 a cada uno
-                torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 1
-                torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 1
+            else: # Tablas o empate
+                torneo['puntos'][j1] += 1
+                torneo['puntos'][j2] += 1
                 print(f"🤝 Tablas: {j1} +1 pt, {j2} +1 pt")
             
-            print(f"📊 Puntos actuales en torneo {torneo['nombre']}: {torneo['puntos']}")
+            print(f"📊 Puntos finales en torneo: {torneo['puntos']}")
             
             del partidas_torneo_activas[sala_id]
             
-            # Liberar jugadores para nuevo emparejamiento
             for jugador in torneo['jugadores']:
                 sid = usuarios_conectados.get(jugador)
                 if sid and sid in sids_activos:
-                    socketio.emit('clasificacion_torneo', 
-                                 obtener_clasificacion_torneo(torneo_id), room=sid)
-                    socketio.emit('jugadores_torneo', 
-                                 torneo['jugadores'], room=sid)
+                    socketio.emit('clasificacion_torneo', obtener_clasificacion_torneo(torneo_id), room=sid)
+                    socketio.emit('jugadores_torneo', torneo['jugadores'], room=sid)
                     socketio.emit('puedes_buscar', room=sid)
                     print(f"🔄 {jugador} liberado para nuevo emparejamiento")
                 
@@ -1592,95 +1515,87 @@ def oferta_tablas(data):
 @socketio.on('aceptar_tablas')
 def aceptar_tablas(data):
     sala_id = data.get('sala')
-    
-    # 1. Verificar si la partida ya terminó (evita sobrescribir jaque mate)
+    print(f"🔍 DEBUG: Se recibió 'aceptar_tablas' para la sala {sala_id}")
+
     if sala_id in salas and salas[sala_id].get('partida_terminada', False):
-        print(f"⚠️ Intento de aceptar tablas en partida ya terminada en {sala_id}, ignorando...")
+        print(f"⚠️ Intento de aceptar tablas en partida ya terminada, ignorando...")
         return
-    
+
     if sala_id in salas:
         salas[sala_id]['partida_terminada'] = True
         if 'desconectado' in salas[sala_id]:
             del salas[sala_id]['desconectado']
-        
+
         sala = salas[sala_id]
         nick_blanco = sala.get('blanco')
         nick_negro = sala.get('negro')
-        
         tiempo_partida = sala.get('tiempo', 5)
         categoria = obtener_categoria(tiempo_partida)
-        
-        nuevo_elo_blanco = 1200
-        nuevo_elo_negro = 1200
-        
+
         try:
             elo_blanco = obtener_elo(nick_blanco, categoria)
             elo_negro = obtener_elo(nick_negro, categoria)
-            
-            print(f"🤝 Partida tablas: {nick_blanco} (ELO {categoria}: {elo_blanco}) vs {nick_negro} (ELO {categoria}: {elo_negro})")
-            
+
             nuevo_elo_blanco = calcular_elo(elo_blanco, elo_negro, 'tablas')
             nuevo_elo_negro = calcular_elo(elo_negro, elo_blanco, 'tablas')
-            
-            if not salas[sala_id].get('estadisticas_actualizadas', False):
+
+            if not sala.get('estadisticas_actualizadas', False):
                 actualizar_estadisticas_db(nick_blanco, 'tablas', categoria)
                 actualizar_estadisticas_db(nick_negro, 'tablas', categoria)
-                salas[sala_id]['estadisticas_actualizadas'] = True
-                print(f"✅ Estadísticas actualizadas para tablas en {sala_id}")
-            else:
-                print(f"⚠️ Estadísticas ya actualizadas para {sala_id}, omitiendo...")
-            
-            print(f"📊 {nick_blanco}: {elo_blanco} → {nuevo_elo_blanco}")
-            print(f"📊 {nick_negro}: {elo_negro} → {nuevo_elo_negro}")
-            
+                sala['estadisticas_actualizadas'] = True
+
             actualizar_elo_db(nick_blanco, nuevo_elo_blanco, categoria)
             actualizar_elo_db(nick_negro, nuevo_elo_negro, categoria)
-            
-            salas[sala_id]['elo_blanco'] = nuevo_elo_blanco
-            salas[sala_id]['elo_negro'] = nuevo_elo_negro
-            print(f"💾 ELOs guardados en sala {sala_id}: Blanco={nuevo_elo_blanco}, Negro={nuevo_elo_negro}")
-            
+
+            sala['elo_blanco'] = nuevo_elo_blanco
+            sala['elo_negro'] = nuevo_elo_negro
         except Exception as e:
             print(f"❌ Error al actualizar ELO en tablas: {e}")
-        
+
         emit('partida_finalizada', {
             'motivo': 'tablas',
-            'ganador': 'empate',
+            'ganador': 'tablas', 
             'elo_blanco': nuevo_elo_blanco,
             'elo_negro': nuevo_elo_negro
         }, room=sala_id)
-        
-        # 🆕 ACTUALIZAR PUNTOS DEL TORNEO EN CASO DE TABLAS
+
+        # 🏆 ACTUALIZAR PUNTOS DEL TORNEO CON RED DE SEGURIDAD
         if sala_id in partidas_torneo_activas:
             partida_torneo = partidas_torneo_activas[sala_id]
             torneo_id = partida_torneo['torneo_id']
-            
+
             if torneo_id in torneos:
                 torneo = torneos[torneo_id]
                 j1 = partida_torneo['jugador1']
                 j2 = partida_torneo['jugador2']
-                
-                # En tablas, ambos suman 1 punto
-                torneo['puntos'][j1] = torneo['puntos'].get(j1, 0) + 1
-                torneo['puntos'][j2] = torneo['puntos'].get(j2, 0) + 1
-                
-                print(f"🤝 Tablas en torneo: {j1} +1 pt, {j2} +1 pt")
-                print(f"📊 Puntos actuales en torneo {torneo['nombre']}: {torneo['puntos']}")
-                
+
+                # 🛡️ RED DE SEGURIDAD: Si fueron borrados por desconexión, los volvemos a meter
+                for j in [j1, j2]:
+                    if j not in torneo['jugadores']:
+                        torneo['jugadores'].append(j)
+                        print(f"⚠️ {j} no estaba en la lista, se ha vuelto a añadir.")
+                    if j not in torneo['puntos']:
+                        torneo['puntos'][j] = 0
+
+                # Ahora sí, sumamos 1 punto a CADA UNO
+                torneo['puntos'][j1] += 1
+                torneo['puntos'][j2] += 1
+
+                print(f"✅ TORNEO (Tablas): {j1} ahora tiene {torneo['puntos'][j1]} pts")
+                print(f"✅ TORNEO (Tablas): {j2} ahora tiene {torneo['puntos'][j2]} pts")
+
                 del partidas_torneo_activas[sala_id]
-                
-                # Liberar jugadores para nuevo emparejamiento
+
                 for jugador in torneo['jugadores']:
                     sid = usuarios_conectados.get(jugador)
                     if sid and sid in sids_activos:
-                        socketio.emit('clasificacion_torneo', 
-                                     obtener_clasificacion_torneo(torneo_id), room=sid)
-                        socketio.emit('jugadores_torneo', 
-                                     torneo['jugadores'], room=sid)
-                        socketio.emit('puedes_buscar', room=sid)
-                        print(f"🔄 {jugador} liberado para nuevo emparejamiento")
-        
-        print(f"✅ Tablas aceptadas en sala {sala_id} - ELOs actualizados")
+                        emit('clasificacion_torneo', obtener_clasificacion_torneo(torneo_id), room=sid)
+                        emit('jugadores_torneo', torneo['jugadores'], room=sid)
+                        emit('puedes_buscar', room=sid)
+                
+                print(f"🔄 Clasificación actualizada correctamente")
+
+        print(f"✅ Tablas procesadas correctamente en sala {sala_id}")
 
 @socketio.on('rechazar_tablas')
 def rechazar_tablas(data):
@@ -1941,29 +1856,51 @@ def unirse_torneo(data):
         
         if jugador not in torneo['jugadores']:
             torneo['jugadores'].append(jugador)
+        
+        # 🛡️ FIX: Solo inicializar a 0 si NO tiene puntos. ¡NUNCA sobrescribir los que ya tenga!
+        if jugador not in torneo['puntos']:
             torneo['puntos'][jugador] = 0
-            print(f"✅ {jugador} se unió al torneo {torneo['nombre']}")
-        else:
-            print(f"ℹ️ {jugador} ya está en el torneo {torneo['nombre']}")
+            
+        print(f"✅ {jugador} en el torneo {torneo['nombre']} con {torneo['puntos'][jugador]} pts")
         
-        if torneo_id not in colas_torneo:
-            colas_torneo[torneo_id] = []
-        
-        # ✅ NUEVO: Enviar clasificación y jugadores a TODOS los del torneo
         clasificacion = obtener_clasificacion_torneo(torneo_id)
-        
-        # Enviar a todos los jugadores conectados del torneo
         for nick in torneo['jugadores']:
             sid = usuarios_conectados.get(nick)
             if sid and sid in sids_activos:
                 emit('clasificacion_torneo', clasificacion, room=sid)
                 emit('jugadores_torneo', torneo['jugadores'], room=sid)
-                print(f"📤 Enviando lista actualizada a {nick}")
         
-        # Actualizar lista global de torneos
         socketio.emit('lista_torneos_actualizada', obtener_lista_torneos())
+@socketio.on('salir_torneo')
+def salir_torneo(data):
+    torneo_id = data.get('torneo_id')
+    jugador = data.get('jugador')
+    
+    if torneo_id in torneos:
+        torneo = torneos[torneo_id]
+        
+        # Si el jugador está en la lista, lo sacamos
+        if jugador in torneo.get('jugadores', []):
+            torneo['jugadores'].remove(jugador)
+            
+            # También lo quitamos de la clasificación si se fue
+            if jugador in torneo.get('puntos', {}):
+                del torneo['puntos'][jugador]
+                
+            print(f"🚪 {jugador} ha salido del torneo {torneo_id}")
+            
+            # Avisamos a todos los jugadores que siguen en el torneo
+            clasificacion = obtener_clasificacion_torneo(torneo_id)
+            for nick in torneo['jugadores']:
+                sid = usuarios_conectados.get(nick)
+                if sid and sid in sids_activos:
+                    emit('clasificacion_torneo', clasificacion, room=sid)
+                    emit('jugadores_torneo', torneo['jugadores'], room=sid)
+            
+            # Actualizar lista global de torneos
+            socketio.emit('lista_torneos_actualizada', obtener_lista_torneos())
     else:
-        print(f"❌ Torneo {torneo_id} no encontrado o no activo")
+        print(f"️ Torneo {torneo_id} no encontrado al salir")
         
 @socketio.on('registrar_sesion_torneo')
 def registrar_sesion_torneo(data):
@@ -2737,7 +2674,7 @@ def programar_torneos_del_dia(dia_semana):
                 3600,
                 config['rondas']
             )
-
+            
 def limpiar_torneos_expirados():
     """Revisa y desactiva los torneos que ya han superado su duración"""
     ahora = time.time()
